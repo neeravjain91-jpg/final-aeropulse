@@ -220,7 +220,7 @@
     cutawayCard.innerHTML = `
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
         <div class="hardware-title">
-          <span>⚡</span> Real-Time UAV Aero-Piston Engine Cutaway & Thermal Heatmap
+          <span>⚙</span> Real-Time UAV Aero-Piston Engine Cutaway & Thermal Heatmap
         </div>
         <div style="font-size:12px; color:#91a5c2;">
           Virtual Sensors Active • Thermodynamic State Synchronized
@@ -321,7 +321,7 @@
     hwConsole.innerHTML = `
       <div style="width:100%;">
         <div class="hardware-title">
-          <span>⚙️</span> Localhost UAV Hardware & Flight Envelope Simulator
+          <span>⚙</span> Localhost UAV Hardware & Flight Envelope Simulator
         </div>
         <div style="font-size:12px; color:#91a5c2; margin-top:3px;">
           Adjust physical sliders to dynamically drive the in-cylinder thermodynamic cycle and Digital Twin in real-time.
@@ -357,7 +357,7 @@
     whatifCard.innerHTML = `
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
         <div class="hardware-title">
-          <span>🎯</span> What-If Mission Profile Comparator & RUL Impact
+          <span>⎈</span> What-If Mission Profile Comparator & RUL Impact
         </div>
         <button id="btnRunWhatIf" style="max-width:200px; padding:7px 14px; font-size:12px;">Compare What-If Plan</button>
       </div>
@@ -652,7 +652,7 @@
         const lubH = calcSubHealth(['Oil_Pressure', 'Oil_Temp']);
         const fuelH = calcSubHealth(['MAP_Injector', 'Fuel_Flow']);
         const elecH = calcSubHealth(['Battery_Voltage', 'Battery_Current', 'Alternator_Temp']);
-        const combH = r.fault_candidates && r.fault_candidates.some(f => f.name.includes('Combustion') || f.name.includes('Misfire')) ? 45 : 99;
+        const combH = (Array.isArray(r.fault_candidates) && r.fault_candidates.some(f => f.name && (f.name.includes('Combustion') || f.name.includes('Misfire')))) ? 45 : 99;
         const mechH = r.telemetry && r.telemetry.Vibration > 2.0 ? 55 : 98;
 
         const updateBadge = (id, val) => {

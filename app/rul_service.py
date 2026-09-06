@@ -71,15 +71,16 @@ class RULService:
             )
 
             if trend_res.get("rul_hours") is not None and trend_res.get("status") == "DEGRADING":
+                # Mission stress is already directly manifested in the observed degradation trajectory.
+                # Do not double-count stress with a post-hoc divisor.
                 base_rul = float(trend_res["rul_hours"])
-                adjusted_rul = max(0.5, base_rul / math.sqrt(stress))
                 confidence = float(trend_res.get("confidence", 0.75))
                 spread = (1.0 - confidence) * 0.35
 
                 return {
-                    "rul_hours": round(adjusted_rul, 2),
-                    "rul_lower_hours": max(0.0, round(adjusted_rul * (1.0 - spread), 2)),
-                    "rul_upper_hours": round(adjusted_rul * (1.0 + spread), 2),
+                    "rul_hours": round(base_rul, 2),
+                    "rul_lower_hours": max(0.0, round(base_rul * (1.0 - spread), 2)),
+                    "rul_upper_hours": round(base_rul * (1.0 + spread), 2),
                     "confidence": round(confidence, 2),
                     "rul_confidence": round(confidence, 2),
                     "degradation_rate_per_hour": round(float(trend_res.get("trend_per_hour", 0.5)), 3),
@@ -125,7 +126,7 @@ class RULService:
             "status": status,
             "failure_mode_risk": self._diagnose_risk_tier(current_health),
             "stress_multiplier": stress,
-            "method": "Hybrid Physics-Weibull Model",
+            "method": "Physics-Stress Weighted Trend Extrapolation",
         }
 
     def predict(
@@ -143,8 +144,15 @@ class RULService:
         if slope is not None:
             slope_val = float(slope)
             remaining = base_health - self.CRITICAL_HEALTH_THRESHOLD
-            divisor = abs(slope_val * 60.0) if abs(slope_val) < 0.2 else abs(slope_val)
-            rul_val = max(0.0, remaining / max(0.01, divisor))
+            if slope_val >= 0.0:
+                rul_val = self.NOMINAL_TBO_HOURS
+                status = "STABLE_OR_NON_DEGRADING"
+            else:
+                deg_rate = -slope_val
+                divisor = deg_rate * 60.0 if deg_rate < 0.2 else deg_rate
+                rul_val = 0.0 if base_health <= self.CRITICAL_HEALTH_THRESHOLD else max(0.0, remaining / max(0.01, divisor))
+                status = "SLOPE_EXTRAPOLATED"
+
             return {
                 "rul_hours": round(rul_val, 2),
                 "rul_lower_hours": max(0.0, round(rul_val * 0.75, 2)),
@@ -154,7 +162,7 @@ class RULService:
                 "health_index_for_rul": round(base_health, 1),
                 "degradation_slope": slope_val,
                 "degradation_severity": round(deg_sev, 3),
-                "status": "SLOPE_EXTRAPOLATED",
+                "status": status,
                 "failure_mode_risk": self._diagnose_risk_tier(base_health),
                 "stress_multiplier": 1.0,
                 "method": "Explicit Slope Estimation",

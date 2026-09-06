@@ -1,0 +1,29 @@
+{
+  "node_id": "UAV-ALPHA-EDGE-01",
+  "drone_id": "UAV-ALPHA-01",
+  "engine_type": "ROTAX_914F_TURBO",
+  "can_transport": {
+    "interface_type": "auto",
+    "socketcan_channel": "can0",
+    "bitrate": 500000,
+    "fallback_to_simulated": true
+  },
+  "runtime": {
+    "telemetry_rate_hz": 50.0,
+    "downlink_rate_hz": 5.0,
+    "buffer_capacity": 128,
+    "max_allowed_time_drift_s": 5.0
+  },
+  "thresholds": {
+    "anomaly_z_score_watch": 1.5,
+    "anomaly_z_score_warning": 2.5,
+    "anomaly_z_score_critical": 4.5,
+    "sensor_trust_min_pass": 50.0,
+    "consecutive_anomalies_critical": 5
+  },
+  "storage": {
+    "log_dir": "/var/log/aeropulse",
+    "max_log_mb": 50,
+    "rotate_logs": true
+  }
+}

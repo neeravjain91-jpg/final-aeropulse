@@ -1,0 +1,126 @@
+{
+  "dataset": "Case Western Reserve University (CWRU) Bearing Data Center",
+  "total_npz_files_audited": 161,
+  "documented_disclaimer": "CWRU validates signal-processing and spectral feature-extraction methodology ONLY. It does NOT represent aero-piston engine vibration ground truth.",
+  "summary_by_fault_class": {
+    "Normal": {
+      "samples_count": 4,
+      "rms": {
+        "mean": 0.067,
+        "std": 0.004
+      },
+      "kurtosis": {
+        "mean": -0.103,
+        "std": 0.054
+      },
+      "crest_factor": {
+        "mean": 3.669,
+        "std": 0.121
+      },
+      "spectral_centroid_hz": {
+        "mean": 1128.65,
+        "std": 12.248
+      },
+      "envelope_kurtosis": {
+        "mean": 0.413,
+        "std": 0.128
+      }
+    },
+    "Ball (B)": {
+      "samples_count": 40,
+      "rms": {
+        "mean": 0.351,
+        "std": 0.597
+      },
+      "kurtosis": {
+        "mean": 3.009,
+        "std": 5.08
+      },
+      "crest_factor": {
+        "mean": 6.056,
+        "std": 2.307
+      },
+      "spectral_centroid_hz": {
+        "mean": 2862.738,
+        "std": 208.61
+      },
+      "envelope_kurtosis": {
+        "mean": 6.789,
+        "std": 8.932
+      }
+    },
+    "Inner Race (IR)": {
+      "samples_count": 40,
+      "rms": {
+        "mean": 0.344,
+        "std": 0.223
+      },
+      "kurtosis": {
+        "mean": 4.854,
+        "std": 6.281
+      },
+      "crest_factor": {
+        "mean": 6.223,
+        "std": 2.069
+      },
+      "spectral_centroid_hz": {
+        "mean": 3030.787,
+        "std": 998.887
+      },
+      "envelope_kurtosis": {
+        "mean": 8.769,
+        "std": 9.968
+      }
+    },
+    "Outer Race (OR)": {
+      "samples_count": 77,
+      "rms": {
+        "mean": 0.398,
+        "std": 0.274
+      },
+      "kurtosis": {
+        "mean": 6.723,
+        "std": 8.697
+      },
+      "crest_factor": {
+        "mean": 6.401,
+        "std": 2.275
+      },
+      "spectral_centroid_hz": {
+        "mean": 2996.225,
+        "std": 397.438
+      },
+      "envelope_kurtosis": {
+        "mean": 9.76,
+        "std": 10.441
+      }
+    }
+  },
+  "feature_discriminant_analysis": {
+    "Ball (B)": {
+      "kurtosis_mean": 3.009,
+      "normal_kurtosis_mean": -0.103,
+      "fisher_discriminant_score": 0.38,
+      "fault_detection_capability": "MODERATE"
+    },
+    "Inner Race (IR)": {
+      "kurtosis_mean": 4.854,
+      "normal_kurtosis_mean": -0.103,
+      "fisher_discriminant_score": 0.62,
+      "fault_detection_capability": "MODERATE"
+    },
+    "Outer Race (OR)": {
+      "kurtosis_mean": 6.723,
+      "normal_kurtosis_mean": -0.103,
+      "fisher_discriminant_score": 0.62,
+      "fault_detection_capability": "MODERATE"
+    }
+  },
+  "feature_pipeline_architecture": {
+    "stage_1": "Raw High-Frequency Accelerometer (12 kHz / 48 kHz)",
+    "stage_2": "Time-Domain Sliding Statistics (RMS, Kurtosis, Crest Factor)",
+    "stage_3": "FFT & Spectral Energy Decomposition",
+    "stage_4": "Demodulated Envelope Detection",
+    "stage_5": "Normalized Scalar Vibration Index for AeroPulse-X Propulsion State"
+  }
+}

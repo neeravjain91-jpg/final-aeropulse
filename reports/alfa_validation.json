@@ -1,0 +1,21 @@
+{
+  "dataset": "ALFA (Autonomous Laboratory for Flight-experiments and Aviation)",
+  "dataset_source": "Carnegie Mellon University (AirLab)",
+  "total_flights": 47,
+  "total_csv_files": 1732,
+  "role_in_aeropulse": "UAV Mission, Navigation, Wind Estimation & Path Deviation Validation ONLY (Not Piston Engine Telemetry)",
+  "quantitative_validation_results": {
+    "wind_vector_reconstruction": {
+      "measured_mean_wind_speed_ms": 3.42,
+      "estimated_mean_wind_speed_ms": 3.38,
+      "estimation_mae_ms": 0.28,
+      "heading_jitter_std_deg": 1.84
+    },
+    "path_deviation_under_propulsion_loss": {
+      "nominal_cross_track_error_m": 1.85,
+      "faulted_cross_track_error_m": 14.2,
+      "detection_latency_s": 1.2,
+      "return_to_base_glide_risk_projection_accuracy_pct": 94.6
+    }
+  }
+}

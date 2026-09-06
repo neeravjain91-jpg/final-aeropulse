@@ -1,0 +1,66 @@
+{
+  "test_partitions": "NASA ACES Held-Out Flights ['191', '225', '235'] (30,061 samples)",
+  "nominal_baseline": {
+    "accuracy_pct": 87.94,
+    "critical_recall_pct": 89.99,
+    "critical_fnr_pct": 10.01
+  },
+  "perturbation_stress_tests": {
+    "sensor_noise_2pct": {
+      "accuracy_pct": 85.38,
+      "accuracy_drop_pct": -2.56,
+      "critical_recall_pct": 83.8,
+      "status": "ROBUST"
+    },
+    "sensor_noise_5pct": {
+      "accuracy_pct": 73.58,
+      "accuracy_drop_pct": -14.36,
+      "critical_recall_pct": 74.23,
+      "status": "GRACEFUL_DEGRADATION"
+    },
+    "thermal_drift_15deg_cht": {
+      "accuracy_pct": 83.57,
+      "accuracy_drop_pct": -4.37,
+      "critical_recall_pct": 90.57,
+      "status": "EXCELLENT_SAFETY_PRESERVED"
+    },
+    "map_drift_3inhg": {
+      "accuracy_pct": 88.59,
+      "accuracy_drop_pct": 0.65,
+      "critical_recall_pct": 90.13,
+      "status": "COMPENSATED_BY_TWIN"
+    },
+    "oil_pressure_loss_10psi": {
+      "accuracy_pct": 87.61,
+      "accuracy_drop_pct": -0.33,
+      "critical_recall_pct": 90.43,
+      "status": "ZERO_SAFETY_IMPACT"
+    }
+  },
+  "cross_flight_generalization_lofo": {
+    "mean_accuracy_pct": 88.67,
+    "std_accuracy_pct": 5.5,
+    "min_accuracy_pct": 72.81,
+    "min_flight": "aces1am_2002_216",
+    "max_accuracy_pct": 95.77,
+    "max_flight": "aces1am_2002_220",
+    "95_percent_bootstrap_ci": {
+      "accuracy_pct": [
+        87.57,
+        88.3
+      ],
+      "balanced_accuracy_pct": [
+        82.87,
+        84.25
+      ],
+      "macro_f1_pct": [
+        80.31,
+        81.88
+      ],
+      "critical_recall_pct": [
+        87.76,
+        92.28
+      ]
+    }
+  }
+}

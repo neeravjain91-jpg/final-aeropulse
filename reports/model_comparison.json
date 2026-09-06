@@ -1,0 +1,206 @@
+{
+  "HistGradientBoosting": {
+    "Accuracy": 86.92,
+    "Balanced_Accuracy": 83.56,
+    "Macro_F1": 81.51,
+    "Critical_Recall": 83.83,
+    "Critical_Precision": 78.3,
+    "Critical_F1": 80.97,
+    "Critical_FNR": 16.17,
+    "GroupKFold_Mean": 88.65,
+    "GroupKFold_Std": 4.83,
+    "Inference_Latency_ms": 0.00666,
+    "Model_Size_KB": 1441.4,
+    "Confusion_Matrix": [
+      [
+        17678,
+        1155,
+        10,
+        2
+      ],
+      [
+        1058,
+        5712,
+        1163,
+        13
+      ],
+      [
+        3,
+        288,
+        2793,
+        212
+      ],
+      [
+        8,
+        1,
+        149,
+        819
+      ]
+    ],
+    "Per_Class_Recall": {
+      "Normal": 93.81,
+      "Watch": 71.89,
+      "Warning": 84.74,
+      "Critical": 83.83
+    },
+    "Per_Class_F1": {
+      "Normal": 94.05,
+      "Watch": 75.65,
+      "Warning": 75.37,
+      "Critical": 80.97
+    }
+  },
+  "Calibrated_HGB": {
+    "Accuracy": 83.93,
+    "Balanced_Accuracy": 79.17,
+    "Macro_F1": 78.21,
+    "Critical_Recall": 79.63,
+    "Critical_Precision": 82.42,
+    "Critical_F1": 81.0,
+    "Critical_FNR": 20.37,
+    "GroupKFold_Mean": 88.65,
+    "GroupKFold_Std": 4.83,
+    "Inference_Latency_ms": 0.01584,
+    "Model_Size_KB": 3486.4,
+    "Confusion_Matrix": [
+      [
+        18228,
+        617,
+        0,
+        0
+      ],
+      [
+        2484,
+        4169,
+        1293,
+        0
+      ],
+      [
+        1,
+        233,
+        2896,
+        166
+      ],
+      [
+        0,
+        0,
+        199,
+        778
+      ]
+    ],
+    "Per_Class_Recall": {
+      "Normal": 96.73,
+      "Watch": 52.47,
+      "Warning": 87.86,
+      "Critical": 79.63
+    },
+    "Per_Class_F1": {
+      "Normal": 92.16,
+      "Watch": 64.31,
+      "Warning": 75.38,
+      "Critical": 81.0
+    }
+  },
+  "RandomForest": {
+    "Accuracy": 85.05,
+    "Balanced_Accuracy": 75.5,
+    "Macro_F1": 75.85,
+    "Critical_Recall": 52.41,
+    "Critical_Precision": 86.78,
+    "Critical_F1": 65.35,
+    "Critical_FNR": 47.59,
+    "GroupKFold_Mean": 88.65,
+    "GroupKFold_Std": 4.83,
+    "Inference_Latency_ms": 0.00093,
+    "Model_Size_KB": 23412.5,
+    "Confusion_Matrix": [
+      [
+        17699,
+        1145,
+        1,
+        0
+      ],
+      [
+        1248,
+        5262,
+        1436,
+        0
+      ],
+      [
+        3,
+        267,
+        2948,
+        78
+      ],
+      [
+        3,
+        1,
+        461,
+        512
+      ]
+    ],
+    "Per_Class_Recall": {
+      "Normal": 93.92,
+      "Watch": 66.22,
+      "Warning": 89.44,
+      "Critical": 52.41
+    },
+    "Per_Class_F1": {
+      "Normal": 93.65,
+      "Watch": 71.98,
+      "Warning": 72.41,
+      "Critical": 65.35
+    }
+  },
+  "ExtraTrees": {
+    "Accuracy": 84.25,
+    "Balanced_Accuracy": 77.14,
+    "Macro_F1": 74.96,
+    "Critical_Recall": 60.9,
+    "Critical_Precision": 64.53,
+    "Critical_F1": 62.66,
+    "Critical_FNR": 39.1,
+    "GroupKFold_Mean": 88.65,
+    "GroupKFold_Std": 4.83,
+    "Inference_Latency_ms": 0.00126,
+    "Model_Size_KB": 20675.8,
+    "Confusion_Matrix": [
+      [
+        17366,
+        1340,
+        77,
+        62
+      ],
+      [
+        1160,
+        5271,
+        1365,
+        150
+      ],
+      [
+        1,
+        241,
+        2939,
+        115
+      ],
+      [
+        6,
+        1,
+        375,
+        595
+      ]
+    ],
+    "Per_Class_Recall": {
+      "Normal": 92.15,
+      "Watch": 66.34,
+      "Warning": 89.17,
+      "Critical": 60.9
+    },
+    "Per_Class_F1": {
+      "Normal": 92.92,
+      "Watch": 71.23,
+      "Warning": 73.0,
+      "Critical": 62.66
+    }
+  }
+}

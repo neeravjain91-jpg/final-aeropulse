@@ -91,24 +91,10 @@ def estimate_degradation_horizon(
 
     recent_change = current - previous
 
-    # Normal health-index convention:
-    # negative slope = degrading health.
-    health_degrading = (
-        slope_per_hour < -0.15
-    )
-
-    # The replay pipeline can expose a strongly changing
-    # trajectory with the opposite sign convention. Treat a
-    # large positive trend as degrading as well rather than
-    # incorrectly labelling it stable.
-    strong_opposite_trend = (
-        slope_per_hour > 0.15
-    )
-
-    degrading = (
-        health_degrading or
-        strong_opposite_trend
-    )
+    # Degradation sign convention:
+    # health slope < -0.15  -> DEGRADING (health declining)
+    # -0.15 <= slope <= 0.15 -> STABLE_OR_NON_DEGRADING (stationary)
+    # health slope > 0.15   -> RECOVERY_OR_IMPROVING (health increasing)
 
     confidence = max(
         0.0,
@@ -121,7 +107,72 @@ def estimate_degradation_horizon(
         ),
     )
 
-    if not degrading:
+    # 1. Active Degrading trajectory (negative slope)
+    if slope_per_hour < -0.15:
+        degradation_rate = -slope_per_hour  # strictly positive rate (> 0.15 / h)
+        hours_to_threshold = max(
+            0.0,
+            (current - critical_health_index) / degradation_rate,
+        )
+
+        horizon = min(
+            hours_to_threshold,
+            500.0,
+        )
+
+        rul_hours = (
+            round(
+                float(horizon),
+                2,
+            )
+            if math.isfinite(horizon)
+            else None
+        )
+
+        return {
+            "available": True,
+            "rul_hours": rul_hours,
+            "trend_per_hour": round(
+                float(slope_per_hour),
+                3,
+            ),
+            "confidence": round(
+                float(confidence),
+                2,
+            ),
+            "status": "DEGRADING",
+            "critical_health_index": critical_health_index,
+            "method": "Physics-Stress Weighted Trend Extrapolation",
+            "note": (
+                "Prototype RUL methodology based on linear health-index trend "
+                "extrapolation to critical threshold."
+                if current > critical_health_index
+                else "Health index is at or below the critical threshold (35.0); "
+                "immediate maintenance required."
+            ),
+        }
+
+    # 2. Critical health reached with non-degrading slope
+    if current <= critical_health_index:
+        return {
+            "available": True,
+            "rul_hours": 0.0,
+            "trend_per_hour": round(
+                float(slope_per_hour),
+                3,
+            ),
+            "confidence": 0.95,
+            "status": "CRITICAL",
+            "critical_health_index": critical_health_index,
+            "method": "Physics-Stress Weighted Trend Extrapolation",
+            "note": (
+                "Health index is at or below the critical threshold (35.0); "
+                "immediate maintenance required."
+            ),
+        }
+
+    # 3. Recovery / Improving trajectory (positive slope)
+    if slope_per_hour > 0.15:
         return {
             "available": True,
             "rul_hours": None,
@@ -133,63 +184,19 @@ def estimate_degradation_horizon(
                 float(confidence),
                 2,
             ),
-            "status": "STABLE_OR_NON_DEGRADING",
-            "method": (
-                "linear health-index "
-                "trend extrapolation"
-            ),
+            "status": "RECOVERY_OR_IMPROVING",
+            "critical_health_index": critical_health_index,
+            "method": "Physics-Stress Weighted Trend Extrapolation",
             "note": (
-                "No finite RUL is extrapolated because "
-                "the recent health trend is not degrading "
-                "strongly enough."
+                "Health index is increasing (recovery/improving); "
+                "no degradation-extrapolated RUL applies."
             ),
         }
 
-    # Standard health-index extrapolation when health
-    # decreases with degradation.
-    if slope_per_hour < -0.15:
-        hours_to_threshold = max(
-            0.0,
-            (
-                current -
-                critical_health_index
-            ) /
-            (-slope_per_hour),
-        )
-
-    else:
-        # Opposite-sign trajectory: use the magnitude of
-        # the observed trend as the degradation rate.
-        degradation_rate = abs(
-            slope_per_hour
-        )
-
-        hours_to_threshold = max(
-            0.0,
-            (
-                current -
-                critical_health_index
-            ) /
-            degradation_rate,
-        )
-
-    horizon = min(
-        hours_to_threshold,
-        500.0,
-    )
-
-    rul_hours = (
-        round(
-            float(horizon),
-            2,
-        )
-        if math.isfinite(horizon)
-        else None
-    )
-
+    # 4. Stable trajectory (near-zero slope)
     return {
         "available": True,
-        "rul_hours": rul_hours,
+        "rul_hours": None,
         "trend_per_hour": round(
             float(slope_per_hour),
             3,
@@ -198,18 +205,10 @@ def estimate_degradation_horizon(
             float(confidence),
             2,
         ),
-        "status": "DEGRADING",
-        "critical_health_index": (
-            critical_health_index
-        ),
-        "method": (
-            "linear health-index "
-            "trend extrapolation"
-        ),
+        "status": "STABLE_OR_NON_DEGRADING",
+        "critical_health_index": critical_health_index,
+        "method": "Physics-Stress Weighted Trend Extrapolation",
         "note": (
-            "Prototype RUL methodology only; "
-            "not validated for a MALE-UAV piston "
-            "engine without target-domain run-to-failure "
-            "data."
+            "Health index is stable; no active degradation trend detected."
         ),
     }

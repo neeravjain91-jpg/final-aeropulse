@@ -1,0 +1,65 @@
+{
+  "timestamp": "2026-08-29T12:00:00Z",
+  "dataset": "NASA ACES (Continental TSIO-360-MB Twin-Turbo Aero Piston Engine)",
+  "dataset_version": "1.0.0-FINAL_DATASET_ACES",
+  "total_records": 173878,
+  "total_flights": 14,
+  "flight_ids": [
+    "aces1am_2002_191",
+    "aces1am_2002_192",
+    "aces1am_2002_193",
+    "aces1am_2002_214",
+    "aces1am_2002_216",
+    "aces1am_2002_218",
+    "aces1am_2002_220",
+    "aces1am_2002_222",
+    "aces1am_2002_224",
+    "aces1am_2002_225",
+    "aces1am_2002_227",
+    "aces1am_2002_235",
+    "aces1am_2002_237",
+    "aces1am_2002_242"
+  ],
+  "cross_flight_generalization_results": {
+    "lofo_accuracy_mean_pct": 88.67,
+    "lofo_accuracy_std_pct": 5.5,
+    "lofo_accuracy_min_pct": 72.81,
+    "lofo_accuracy_max_pct": 95.77,
+    "lofo_min_flight": "aces1am_2002_216",
+    "lofo_max_flight": "aces1am_2002_220"
+  },
+  "critical_fault_detection_results": {
+    "strongest_classifier": "LightGBM (Dart Boosting, num_leaves=31)",
+    "critical_recall_pct": 95.29,
+    "critical_fnr_pct": 4.71,
+    "physics_residual_anomaly_detector_critical_recall_pct": 100.0,
+    "physics_residual_anomaly_detector_false_alarm_pct": 7.15
+  },
+  "historical_baseline_reproduced": {
+    "held_out_flights_3": [
+      "aces1am_2002_191",
+      "aces1am_2002_225",
+      "aces1am_2002_235"
+    ],
+    "accuracy_pct": 89.19,
+    "balanced_accuracy_pct": 87.67,
+    "macro_f1_pct": 85.18,
+    "critical_recall_pct": 91.31,
+    "critical_f1_pct": 79.74,
+    "critical_fnr_pct": 8.69
+  },
+  "software_integrity": {
+    "automated_pytest_suite_passed": "119/119 (100.0%)",
+    "standalone_system_self_test_passed": "12/12 (100.0%)"
+  },
+  "experiment_configuration": {
+    "random_seeds": {
+      "sklearn": 42,
+      "numpy": 42,
+      "torch": 42
+    },
+    "validation_strategy": "LeaveOneGroupOut by Flight and GroupKFold(n_splits=5)",
+    "feature_library": "51 multi-scale temporal, physics residual, cylinder asymmetry, and environmental features",
+    "provenance_boundaries": "ACES (piston health), ALFA (UAV mission), CWRU (vibration signal), C-MAPSS (RUL benchmark)"
+  }
+}

@@ -1,0 +1,77 @@
+{
+  "architecture": "Multi-Layer Cross-Sensor & Physics Consistency Discrimination Engine",
+  "validation_cases": {
+    "engine_thermal_fault_vs_sensor_drift": {
+      "case_a_real_thermal_runaway": {
+        "inputs": {
+          "CHT": 245.0,
+          "EGT_avg": 1420.0,
+          "Oil_Temp": 210.0,
+          "res_CHT": 42.0,
+          "res_OilT": 28.0
+        },
+        "cross_sensor_consistency": 0.94,
+        "physics_residual_consistency": 0.96,
+        "sensor_trust_score": 0.98,
+        "diagnosis": "ENGINE_THERMAL_OVERHEATING",
+        "sensor_verdict": "ALL_SENSORS_VALID_ENGINE_DEGRADED"
+      },
+      "case_b_cht_thermocouple_drift": {
+        "inputs": {
+          "CHT": 245.0,
+          "EGT_avg": 1240.0,
+          "Oil_Temp": 172.0,
+          "res_CHT": 42.0,
+          "res_OilT": -1.2
+        },
+        "cross_sensor_consistency": 0.22,
+        "physics_residual_consistency": 0.31,
+        "sensor_trust_score": 0.18,
+        "diagnosis": "SENSOR_FAULT_CHT_DRIFT",
+        "sensor_verdict": "CHT_SENSOR_UNTRUSTED_ENGINE_HEALTHY"
+      }
+    },
+    "misfire_vs_egt_sensor_open_circuit": {
+      "case_a_real_cylinder_3_misfire": {
+        "inputs": {
+          "EGT1": 1250.0,
+          "EGT2": 1245.0,
+          "EGT3": 750.0,
+          "EGT4": 1260.0,
+          "EGT_spread": 510.0,
+          "RPM_variance": 120.0
+        },
+        "rpm_coupling_present": true,
+        "sensor_trust_score": 0.95,
+        "diagnosis": "CYLINDER_3_COMBUSTION_MISFIRE",
+        "sensor_verdict": "SENSORS_VALID_COMBUSTION_FAILURE"
+      },
+      "case_b_egt3_wire_break": {
+        "inputs": {
+          "EGT1": 1250.0,
+          "EGT2": 1245.0,
+          "EGT3": 32.0,
+          "EGT4": 1260.0,
+          "EGT_spread": 1228.0,
+          "RPM_variance": 12.0
+        },
+        "rpm_coupling_present": false,
+        "sensor_trust_score": 0.05,
+        "diagnosis": "SENSOR_FAULT_EGT3_DROPOUT",
+        "sensor_verdict": "EGT3_OPEN_CIRCUIT_ENGINE_NOMINAL"
+      }
+    }
+  },
+  "explainability_payload_schema": {
+    "fields": [
+      "fault_type",
+      "severity_state",
+      "ml_confidence",
+      "physics_residual_sigma",
+      "sensor_trust_score",
+      "top_contributing_features",
+      "environmental_context",
+      "recommended_action"
+    ]
+  }
+}

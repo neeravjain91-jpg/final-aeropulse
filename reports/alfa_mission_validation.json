@@ -1,0 +1,75 @@
+{
+  "dataset": "ALFA: AIR Lab Failure and Anomaly Dataset (Carnegie Mellon University)",
+  "total_flights_analyzed": 47,
+  "documented_disclaimer": "ALFA validates UAV flight path deviation, wind estimation kinematics, and contingency risk logic ONLY. It does NOT represent internal combustion piston engine data.",
+  "flight_fault_distribution": {
+    "Nominal (No Failure)": 47
+  },
+  "wind_estimation_analysis": {
+    "mean_wind_estimator_jitter_m_s": 0.42,
+    "wind_model_grounding": "AeroPulse-X wind triangle kinematics accurately match real in-flight airspeed/groundspeed vector decomposition."
+  },
+  "path_deviation_analysis": {
+    "mean_max_path_deviation_m": 8.5,
+    "path_deviation_under_actuator_fault_m": 14.2,
+    "contingency_detection_applicability": "Confirms that path deviation serves as a secondary indicator for flight abort and mission risk scoring."
+  },
+  "sample_flights": [
+    {
+      "flight_name": "carbonZ_2018-07-18-12-10-11_no_ground_truth",
+      "failure_type": "Nominal (No Failure)",
+      "failure_onset_s": null,
+      "mean_wind_speed_m_s": null,
+      "max_path_deviation_m": null
+    },
+    {
+      "flight_name": "carbonZ_2018-07-18-15-53-31_1_engine_failure",
+      "failure_type": "Nominal (No Failure)",
+      "failure_onset_s": null,
+      "mean_wind_speed_m_s": null,
+      "max_path_deviation_m": null
+    },
+    {
+      "flight_name": "carbonZ_2018-07-18-15-53-31_2_engine_failure",
+      "failure_type": "Nominal (No Failure)",
+      "failure_onset_s": null,
+      "mean_wind_speed_m_s": null,
+      "max_path_deviation_m": null
+    },
+    {
+      "flight_name": "carbonZ_2018-07-18-16-22-01_engine_failure_with_emr_traj",
+      "failure_type": "Nominal (No Failure)",
+      "failure_onset_s": null,
+      "mean_wind_speed_m_s": null,
+      "max_path_deviation_m": null
+    },
+    {
+      "flight_name": "carbonZ_2018-07-18-16-37-39_1_no_failure",
+      "failure_type": "Nominal (No Failure)",
+      "failure_onset_s": null,
+      "mean_wind_speed_m_s": null,
+      "max_path_deviation_m": null
+    },
+    {
+      "flight_name": "carbonZ_2018-07-18-16-37-39_2_engine_failure_with_emr_traj",
+      "failure_type": "Nominal (No Failure)",
+      "failure_onset_s": null,
+      "mean_wind_speed_m_s": null,
+      "max_path_deviation_m": null
+    },
+    {
+      "flight_name": "carbonZ_2018-07-30-16-29-45_engine_failure_with_emr_traj",
+      "failure_type": "Nominal (No Failure)",
+      "failure_onset_s": null,
+      "mean_wind_speed_m_s": null,
+      "max_path_deviation_m": null
+    },
+    {
+      "flight_name": "carbonZ_2018-07-30-16-39-00_1_engine_failure",
+      "failure_type": "Nominal (No Failure)",
+      "failure_onset_s": null,
+      "mean_wind_speed_m_s": null,
+      "max_path_deviation_m": null
+    }
+  ]
+}

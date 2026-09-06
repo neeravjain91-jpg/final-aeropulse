@@ -1,10 +1,10 @@
 # AEROPULSE-X MODEL VALIDATION & PRODUCTION DEPLOYMENT REPORT
 ## Production Migration to HistGradientBoosting Diagnostics with Hybrid Physics Verification
 
-**Document Version**: 1.1.0-SIH-VALIDATED  
-**Release Date**: August 25, 2026  
-**System**: AeroPulse-X UAV Digital Twin & Predictive Maintenance Dashboard  
-**Status**: Production Implemented & Verified (84/84 Automated Tests Passing)
+**Document Version**: 1.1.0-SIH-VALIDATED
+**Release Date**: August 25, 2026
+**System**: AeroPulse-X UAV Digital Twin & Predictive Maintenance Dashboard
+**Status**: Production Implemented & Verified (146/146 Automated Tests Passing)
 
 ---
 
@@ -22,7 +22,7 @@
 
 ## 2. New Production Model (Winner)
 - **Architecture**: HistGradientBoostingClassifier (Scikit-Learn).
-- **Hyperparameters**: max_iter=150, learning_rate=0.10, max_leaf_nodes=31, min_samples_leaf=20, l2_regularization=1.0, class_weight='balanced', 
+- **Hyperparameters**: max_iter=150, learning_rate=0.10, max_leaf_nodes=31, min_samples_leaf=20, l2_regularization=1.0, class_weight='balanced',
 andom_state=42.
 - **Decision Threshold Calibration**: Safety-critical threshold $\\tau_{\\text{Critical}} = 0.25$ applied in pp/inference.py.
 - **Serialization Size**: **474 KB** (**96.7% size reduction**).
@@ -131,14 +131,20 @@ andom_state=42.
 ---
 
 ## 12. RUL & Prognostic Methodology
-- **Classification**: Prototype Method Demonstrator (SIH Credible).
-- **Formulation**: Continuous polynomial health index extrapolation scaled by operational stress ({\\text{alt}} \\times S_{\\text{temp}} \\times S_{\\text{load}}$) anchored to a Weibull prior ($\\beta=2.4, \\eta=2200$).
+- **Classification**: Physics-Stress Weighted Trend Extrapolation Method Demonstrator.
+- **Formulation**: Dynamic health index trajectory extrapolation to critical threshold ($H = 35.0$) weighted by operational mission stress ($S_{\text{mission}} = S_{\text{alt}} \times S_{\text{temp}} \times S_{\text{dur}} \times S_{\text{dyn}}$).
+- **Semantic Contract**:
+  - $\text{Health} \le 35.0 \implies \text{RUL} = 0.0\text{ h}$ (Critical maintenance required).
+  - $\text{Health slope} < -0.15/\text{h} \implies \text{DEGRADING} \to \text{Finite extrapolated RUL}$.
+  - $-0.15/\text{h} \le \text{Slope} \le +0.15/\text{h} \implies \text{STABLE\_OR\_NON\_DEGRADING} \to \text{RUL} = \text{None}$.
+  - $\text{Health slope} > +0.15/\text{h} \implies \text{RECOVERY\_OR\_IMPROVING} \to \text{RUL} = \text{None}$ (improving trajectories are never inverted into degradation).
+  - Single-count mission stress treatment (no redundant post-hoc divisor).
 
 ---
 
 ## 13. Conformal Uncertainty & Explainability
-- **Uncertainty Calibration**: Outputs HIGH, MODERATE, or AMBIGUOUS confidence ratings based on probability margin ({\\text{top1}} - P_{\\text{top2}}$).
-- **Explainability Payload**: Exposes top anomalous sensor deviations (z_score, measured, expected) and natural language diagnostic rationale in /api/analyze.
+- **Uncertainty Calibration**: Outputs HIGH, MODERATE, or AMBIGUOUS confidence ratings based on probability margin ($P_{\text{top1}} - P_{\text{top2}}$).
+- **Explainability Payload**: Exposes top anomalous sensor deviations (z_score, measured, expected) and natural language diagnostic rationale in `/api/analyze`.
 
 ---
 
@@ -152,18 +158,22 @@ andom_state=42.
 ## 15. SIH Credible Claims & Non-Claims
 
 ### Validated on Real Data:
-- 4-State Health Classification across 173,878 ACES UAV flight telemetry records.
+- 4-State Health Classification across 173,878 NASA ACES aero-piston telemetry records (Continental TSIO-360-MB).
 - 5-Fold Group Cross-Validation across 14 distinct flight missions.
 - Sensor fault detection (bias, drift, spike, stuck sensor) against physics residual baselines.
 
-### Simulation Demonstrated:
-- Hardware-equivalent ECU/CAN bus packet framing.
+### Benchmark & Simulation Demonstrated:
+- Hardware-equivalent ECU/CAN bus packet framing and CRC verification.
 - Continuous mission waypoint flight navigation with wind vector decomposition.
-- Synthetic fault injection and mission replay timelines.
+- Synthetic fault injection and mission replay timelines based on physically coupled ODEs.
+- CWRU bearing dataset used strictly for vibration DSP feature extraction benchmarking (not aero-piston ground truth).
+- ALFA UAV dataset used strictly for UAV flight controls/actuators (not engine ground truth).
+- NASA C-MAPSS used strictly for turbofan RUL prognostic algorithm benchmarking.
 
 ### Transparent Non-Claims:
-- RUL is **not** experimentally validated on run-to-failure engines due to dataset constraints; it is a mathematically defensible prognostic demonstrator.
+- Target-domain aero-piston run-to-failure ground truth does not exist in open datasets; RUL is a scientifically sound methodology demonstrator.
 - Not FAA/EASA certified for real-world flight airworthiness decisions.
+- Does not claim military-grade physical hardware integration without physical test-bench dynamometer runs.
 
 ---
 

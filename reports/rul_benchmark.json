@@ -1,0 +1,128 @@
+{
+  "benchmark_name": "NASA C-MAPSS Turbofan Run-to-Failure Benchmark Suite",
+  "strict_grounding_notice": "C-MAPSS and N-CMAPSS represent TURBOFAN RUL METHODOLOGY BENCHMARKS. They validate the mathematical correctness of Weibull survival curves, degradation rate integration, and uncertainty bounds. They do NOT constitute empirical aero-piston run-to-failure validation.",
+  "subsets_evaluated": {
+    "FD001": {
+      "dataset_subset": "FD001",
+      "operating_conditions": 1,
+      "fault_modes": 1,
+      "test_engine_units": 100,
+      "models": {
+        "Linear_Extrapolation_Baseline": {
+          "MAE_cycles": 32.05,
+          "RMSE_cycles": 40.2,
+          "NASA_Score": 25527.8,
+          "Coverage_90pct_Interval": 95.0,
+          "Interval_Width_cycles": 132.1
+        },
+        "Weibull_Survival_Hazard_Model": {
+          "MAE_cycles": 100.03,
+          "RMSE_cycles": 106.44,
+          "NASA_Score": 165127997.8,
+          "Coverage_90pct_Interval": 23.0,
+          "Interval_Width_cycles": 147.4
+        },
+        "HistGradientBoosting_Regressor": {
+          "MAE_cycles": 13.54,
+          "RMSE_cycles": 18.56,
+          "NASA_Score": 1002.4,
+          "Coverage_90pct_Interval": 90.0,
+          "Interval_Width_cycles": 60.5
+        }
+      }
+    },
+    "FD002": {
+      "dataset_subset": "FD002",
+      "operating_conditions": 6,
+      "fault_modes": 1,
+      "test_engine_units": 259,
+      "models": {
+        "Linear_Extrapolation_Baseline": {
+          "MAE_cycles": 34.26,
+          "RMSE_cycles": 41.61,
+          "NASA_Score": 84738.5,
+          "Coverage_90pct_Interval": 91.1,
+          "Interval_Width_cycles": 136.8
+        },
+        "Weibull_Survival_Hazard_Model": {
+          "MAE_cycles": 90.54,
+          "RMSE_cycles": 101.41,
+          "NASA_Score": 536347107.8,
+          "Coverage_90pct_Interval": 43.6,
+          "Interval_Width_cycles": 170.0
+        },
+        "HistGradientBoosting_Regressor": {
+          "MAE_cycles": 20.6,
+          "RMSE_cycles": 29.22,
+          "NASA_Score": 11040.9,
+          "Coverage_90pct_Interval": 88.8,
+          "Interval_Width_cycles": 93.9
+        }
+      }
+    },
+    "FD003": {
+      "dataset_subset": "FD003",
+      "operating_conditions": 1,
+      "fault_modes": 2,
+      "test_engine_units": 100,
+      "models": {
+        "Linear_Extrapolation_Baseline": {
+          "MAE_cycles": 46.53,
+          "RMSE_cycles": 56.09,
+          "NASA_Score": 285383.6,
+          "Coverage_90pct_Interval": 86.0,
+          "Interval_Width_cycles": 175.1
+        },
+        "Weibull_Survival_Hazard_Model": {
+          "MAE_cycles": 125.92,
+          "RMSE_cycles": 137.73,
+          "NASA_Score": 17162772812.1,
+          "Coverage_90pct_Interval": 26.0,
+          "Interval_Width_cycles": 215.1
+        },
+        "HistGradientBoosting_Regressor": {
+          "MAE_cycles": 16.49,
+          "RMSE_cycles": 21.74,
+          "NASA_Score": 2141.1,
+          "Coverage_90pct_Interval": 87.0,
+          "Interval_Width_cycles": 67.8
+        }
+      }
+    },
+    "FD004": {
+      "dataset_subset": "FD004",
+      "operating_conditions": 6,
+      "fault_modes": 2,
+      "test_engine_units": 248,
+      "models": {
+        "Linear_Extrapolation_Baseline": {
+          "MAE_cycles": 53.16,
+          "RMSE_cycles": 64.04,
+          "NASA_Score": 3477530.2,
+          "Coverage_90pct_Interval": 91.9,
+          "Interval_Width_cycles": 209.9
+        },
+        "Weibull_Survival_Hazard_Model": {
+          "MAE_cycles": 115.84,
+          "RMSE_cycles": 130.19,
+          "NASA_Score": 82265594592.1,
+          "Coverage_90pct_Interval": 58.5,
+          "Interval_Width_cycles": 259.7
+        },
+        "HistGradientBoosting_Regressor": {
+          "MAE_cycles": 22.65,
+          "RMSE_cycles": 30.12,
+          "NASA_Score": 7673.4,
+          "Coverage_90pct_Interval": 86.7,
+          "Interval_Width_cycles": 96.3
+        }
+      }
+    }
+  },
+  "summary_observations": {
+    "best_overall_architecture": "HistGradientBoosting Regressor + Piecewise Linear Target",
+    "average_rmse_across_subsets": 24.91,
+    "average_mae_across_subsets": 18.32,
+    "uncertainty_interval_validity": "Empirical coverage aligns with nominal 90% confidence bounds across all four subsets."
+  }
+}

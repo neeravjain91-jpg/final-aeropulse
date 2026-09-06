@@ -5,60 +5,111 @@ import copy
 import math
 from typing import Any, Dict, Optional
 
-FAULTS = {"none", "overheating", "lubrication", "misfire", "injector", "sensor_drift", "electrical"}
+FAULTS = {
+    "none",
+    "overheating",
+    "lubrication",
+    "misfire",
+    "injector",
+    "sensor_drift",
+    "sensor_bias",
+    "sensor_spike",
+    "electrical",
+}
 
 
 def inject_fault(telemetry: dict, fault: str = "none", severity: float = 0.6):
+    """
+    Injects physically grounded fault degradation into telemetry.
+    Differentiates physical engine faults (which couple thermodynamics, friction, and power)
+    from isolated sensor transducer faults (which affect only the measurement buffer).
+    """
     data = copy.deepcopy(telemetry)
     fault = str(fault).lower()
+    FAULT_ALIASES = {
+        "thermal": "overheating",
+        "temp": "overheating",
+        "fuel": "injector",
+        "bearing": "lubrication",
+    }
+    fault = FAULT_ALIASES.get(fault, fault)
     if fault not in FAULTS:
         raise ValueError(f"Unsupported fault '{fault}'. Allowed: {sorted(FAULTS)}")
     strength = max(0.0, min(1.0, float(severity)))
+    if strength <= 0.0 or fault == "none":
+        return data
 
+    # 1. Physical Fault: Thermal System & Overheating (Cooling Efficiency Loss)
     if fault == "overheating":
+        # Heat rejection deficit accumulates in CHT, coolant, and oil circuits
+        heat_factor = 1.0 / max(0.35, 1.0 - 0.55 * strength)
+        if "CHT" in data:
+            data["CHT"] = float(data["CHT"]) * (0.80 + 0.20 * heat_factor)
+        if "EFI_Water_Temp" in data:
+            data["EFI_Water_Temp"] = float(data["EFI_Water_Temp"]) * (0.85 + 0.15 * heat_factor)
+        if "Oil_Temp" in data:
+            data["Oil_Temp"] = float(data["Oil_Temp"]) * (0.88 + 0.12 * heat_factor)
         for key in ["EGT1", "EGT2", "EGT3"]:
             if key in data:
-                data[key] *= 1 + 0.30 * strength
-        if "EFI_Water_Temp" in data:
-            data["EFI_Water_Temp"] *= 1 + 0.24 * strength
-        if "Oil_Temp" in data:
-            data["Oil_Temp"] *= 1 + 0.18 * strength
-        if "CHT" in data:
-            data["CHT"] *= 1 + 0.26 * strength
+                data[key] = float(data[key]) * (0.92 + 0.08 * heat_factor)
+        if "Efficiency" in data:
+            data["Efficiency"] = max(0.18, float(data["Efficiency"]) * (1.0 - 0.12 * strength))
 
+    # 2. Physical Fault: Lubrication Breakdown (Oil Viscosity Shearing & Pump Drag)
     elif fault == "lubrication":
+        fric_mult = 1.0 + 0.80 * strength
         if "Oil_Pressure" in data:
-            data["Oil_Pressure"] *= max(0.25, 1 - 0.65 * strength)
+            data["Oil_Pressure"] = max(12.0, float(data["Oil_Pressure"]) * max(0.25, 1.0 - 0.65 * strength))
         if "Oil_Temp" in data:
-            data["Oil_Temp"] *= 1 + 0.28 * strength
+            data["Oil_Temp"] = float(data["Oil_Temp"]) * (1.0 + 0.28 * strength)
+        if "Vibration" in data:
+            data["Vibration"] = float(data["Vibration"]) * (1.0 + 0.40 * strength)
+        if "Efficiency" in data:
+            data["Efficiency"] = max(0.18, float(data["Efficiency"]) * (1.0 - 0.14 * strength))
 
+    # 3. Physical Fault: Combustion Misfire (Cyclic Torque Loss & Unburnt Charge)
     elif fault == "misfire":
-        if "Engine_RPM" in data:
-            data["Engine_RPM"] *= 1 - 0.09 * strength
         if "EGT1" in data:
-            data["EGT1"] *= 1 - 0.25 * strength
+            # Cylinder 1 misfire drops exhaust temperature
+            data["EGT1"] = float(data["EGT1"]) * (1.0 - 0.28 * strength)
         if "EGT2" in data:
-            data["EGT2"] *= 1 + 0.03 * strength
+            data["EGT2"] = float(data["EGT2"]) * (1.0 + 0.03 * strength)
+        if "Engine_RPM" in data:
+            data["Engine_RPM"] = max(1400.0, float(data["Engine_RPM"]) * (1.0 - 0.08 * strength))
+        if "Vibration" in data:
+            # Cyclic imbalance causes pronounced mechanical vibration
+            data["Vibration"] = float(data["Vibration"]) + 1.25 * strength
+        if "Brake_Power_kW" in data:
+            data["Brake_Power_kW"] = max(3.0, float(data["Brake_Power_kW"]) * (1.0 - 0.25 * strength))
 
+    # 4. Physical Fault: Fuel Injector Delivery Restriction
     elif fault == "injector":
         if "Fuel_Flow" in data:
-            data["Fuel_Flow"] *= 1 - 0.32 * strength
+            data["Fuel_Flow"] = float(data["Fuel_Flow"]) * max(0.50, 1.0 - 0.32 * strength)
         if "MAP_Injector" in data:
-            data["MAP_Injector"] *= 1 + 0.45 * strength
+            data["MAP_Injector"] = float(data["MAP_Injector"]) * (1.0 + 0.35 * strength)
         if "EGT3" in data:
-            data["EGT3"] *= 1 - 0.20 * strength
+            data["EGT3"] = float(data["EGT3"]) * (1.0 - 0.20 * strength)
+        if "EGT1" in data:
+            data["EGT1"] = float(data["EGT1"]) * (1.0 + 0.08 * strength)
 
-    elif fault == "sensor_drift":
+    # 5. Sensor Faults: Transducer / Signal Bias (Leaves engine physics unchanged)
+    elif fault in ("sensor_drift", "sensor_bias"):
         if "EFI_Water_Temp" in data:
-            data["EFI_Water_Temp"] += 75 * strength
+            data["EFI_Water_Temp"] = float(data["EFI_Water_Temp"]) + 65.0 * strength
 
+    elif fault == "sensor_spike":
+        if "CHT" in data:
+            data["CHT"] = float(data["CHT"]) + 120.0 * strength
+
+    # 6. Electrical Subsystem Degradation
     elif fault == "electrical":
         if "Battery_Voltage" in data:
-            data["Battery_Voltage"] *= max(0.55, 1 - 0.30 * strength)
+            data["Battery_Voltage"] = max(16.0, float(data["Battery_Voltage"]) * (1.0 - 0.28 * strength))
         if "Battery_Current" in data:
-            data["Battery_Current"] -= 30 * strength
+            data["Battery_Current"] = float(data["Battery_Current"]) - 25.0 * strength
         if "Alternator_Temp" in data:
-            data["Alternator_Temp"] *= 1 + 0.24 * strength
+            data["Alternator_Temp"] = float(data["Alternator_Temp"]) * (1.0 + 0.25 * strength)
 
     return data
 

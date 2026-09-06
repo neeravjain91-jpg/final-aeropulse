@@ -381,6 +381,7 @@ class AeroTwinAI:
                 "top_probability": round(top1, 4),
             },
 
+            "telemetry": telemetry,
             "disclaimer": (
                 "Prototype decision-support output; "
                 "not an airworthiness or flight-safety "

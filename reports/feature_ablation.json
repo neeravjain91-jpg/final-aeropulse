@@ -1,0 +1,131 @@
+{
+  "evaluation_split": "Held-Out ACES Missions ['191', '225', '235'] (30,061 samples)",
+  "training_split": "11 ACES Missions (143,817 samples)",
+  "classifier": "HistGradientBoostingClassifier(max_iter=150, class_weight='balanced')",
+  "ablation_levels": {
+    "A_Raw_Sensors": {
+      "features_count": 14,
+      "features": [
+        "Engine_RPM",
+        "EGT1",
+        "EGT2",
+        "EGT3",
+        "EGT4",
+        "CHT",
+        "Oil_Temp",
+        "Oil_Pressure",
+        "Battery_Voltage",
+        "Battery_Current",
+        "Alternator_Temp",
+        "EFI_Fuel_Temp",
+        "EFI_Water_Temp",
+        "MAP_Injector"
+      ],
+      "accuracy_pct": 86.35,
+      "balanced_accuracy_pct": 84.93,
+      "macro_f1_pct": 82.14,
+      "critical_recall_pct": 87.72,
+      "critical_fnr_pct": 12.28,
+      "limitation": "Lacks operational state and physics contextual baselines"
+    },
+    "B_Raw_Plus_Environmental": {
+      "features_count": 18,
+      "features": [
+        "Raw 14",
+        "Operating_State (OneHot)",
+        "Ambient_Temp",
+        "Thermal_Lift (CHT - T_amb)",
+        "Specific_Power_Index"
+      ],
+      "accuracy_pct": 87.85,
+      "balanced_accuracy_pct": 85.19,
+      "macro_f1_pct": 82.81,
+      "critical_recall_pct": 87.48,
+      "critical_fnr_pct": 12.52,
+      "limitation": "Captures flight regimes but lacks thermodynamic coupling expectations"
+    },
+    "C_Raw_Plus_Physics_Residuals": {
+      "features_count": 23,
+      "features": [
+        "Raw 14 + State",
+        "res_MAP",
+        "res_CHT",
+        "res_EGT_avg",
+        "res_Oil_Pressure",
+        "res_Oil_Temp",
+        "res_Fuel_Flow"
+      ],
+      "accuracy_pct": 88.77,
+      "balanced_accuracy_pct": 85.99,
+      "macro_f1_pct": 84.68,
+      "critical_recall_pct": 89.54,
+      "critical_fnr_pct": 10.46,
+      "limitation": "Significant improvement (+0.80% Balanced Acc, +2.06% Critical Recall), but lacks temporal slope awareness"
+    },
+    "D_Raw_Plus_Cylinder_Asymmetry": {
+      "features_count": 27,
+      "features": [
+        "Raw 14 + State + Physics",
+        "EGT_spread",
+        "EGT_std",
+        "EGT1_dev",
+        "EGT2_dev",
+        "EGT3_dev",
+        "EGT4_dev"
+      ],
+      "accuracy_pct": 88.48,
+      "balanced_accuracy_pct": 84.58,
+      "macro_f1_pct": 82.14,
+      "critical_recall_pct": 85.42,
+      "critical_fnr_pct": 14.58,
+      "limitation": "Isolates single-cylinder imbalance but adds variance during full-throttle climb"
+    },
+    "E_Raw_Plus_Environmental_Normalization": {
+      "features_count": 28,
+      "features": [
+        "Raw 14 + State + Physics",
+        "EGT_spread",
+        "Thermal_Lift",
+        "Specific_Power_Index",
+        "Fuel_per_RPM",
+        "Oil_p_per_RPM",
+        "CHT_to_Oil"
+      ],
+      "accuracy_pct": 88.97,
+      "balanced_accuracy_pct": 83.35,
+      "macro_f1_pct": 83.61,
+      "critical_recall_pct": 79.09,
+      "critical_fnr_pct": 20.91,
+      "limitation": "Highest pure accuracy (88.97%) but penalizes critical recall without temporal rate-of-change"
+    },
+    "F_Full_MultiScale_Temporal_Pipeline": {
+      "features_count": 51,
+      "features": [
+        "All above + 10s CHT slope",
+        "10s CHT acceleration",
+        "10s EGT slope",
+        "10s OilP slope",
+        "10s res_CHT slope",
+        "10s res_MAP slope",
+        "5s RPM std",
+        "30s RPM std",
+        "Vibration proxy"
+      ],
+      "accuracy_pct": 88.18,
+      "balanced_accuracy_pct": 84.62,
+      "macro_f1_pct": 81.09,
+      "critical_recall_pct": 91.9,
+      "critical_fnr_pct": 8.1,
+      "limitation": "Best safety-critical operating point on HGB (91.90% Critical Recall, 8.10% FNR)"
+    }
+  },
+  "information_ceiling_verdict": {
+    "theoretical_maximum_accuracy_with_aces_1hz": "89.0% \u2013 90.0%",
+    "limiting_factors": [
+      "1. 1 Hz ECU sampling frequency cannot resolve individual 4-stroke cycle combustion events (crankshaft rotates 45 times per second at 2700 RPM)",
+      "2. Absence of direct in-cylinder pressure transducers (IMEP / P_cyl peak location)",
+      "3. Absence of engine-block tri-axial high-frequency vibration accelerometers",
+      "4. Continuous statistical definition of health states creates 6,149 transition-boundary samples with physical overlap"
+    ]
+  }
+}

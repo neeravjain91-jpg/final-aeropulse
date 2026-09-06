@@ -1,0 +1,28 @@
+{
+  "timestamp": "2026-08-27T12:35:00Z",
+  "model_name": "HGB-PRO (HistGradientBoosting Baseline)",
+  "description": "Verified production baseline before dataset-driven upgrade",
+  "dataset": "NASA ACES (14 Flight Missions, 173,878 real telemetry records)",
+  "metrics": {
+    "accuracy": 89.19,
+    "balanced_accuracy": 87.67,
+    "macro_f1": 85.18,
+    "critical_recall": 91.31,
+    "critical_f1": 79.74,
+    "critical_fnr": 8.69,
+    "group_kfold_mean": 89.26,
+    "group_kfold_std": 4.05
+  },
+  "computational_profile": {
+    "model_artifact_size_kb": 474.0,
+    "inference_latency_ms_per_sample": 0.0091,
+    "features_count": 14,
+    "classes": [
+      "Normal",
+      "Watch",
+      "Warning",
+      "Critical"
+    ]
+  },
+  "validation_protocol": "GroupKFold(n_splits=5, groups=Flight) + Disjoint Held-Out Flights Evaluation"
+}

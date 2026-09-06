@@ -1,0 +1,169 @@
+{
+  "current_model": "HistGradientBoosting Baseline (14 raw sensors)",
+  "current_metrics": {
+    "Accuracy": 86.35,
+    "Balanced_Accuracy": 84.93,
+    "Macro_F1": 82.14,
+    "Critical_Recall": 87.72,
+    "Critical_Precision": 78.48,
+    "Critical_F1": 82.84,
+    "Critical_FNR": 12.28,
+    "GroupKFold_Mean": 86.66,
+    "GroupKFold_Std": 4.63,
+    "Inference_Latency_ms": 0.00476,
+    "Model_Size_KB": 1126.1,
+    "Confusion_Matrix": [
+      [
+        17213,
+        1608,
+        21,
+        3
+      ],
+      [
+        949,
+        5910,
+        1064,
+        23
+      ],
+      [
+        0,
+        243,
+        2844,
+        209
+      ],
+      [
+        0,
+        0,
+        120,
+        857
+      ]
+    ],
+    "Per_Class_Recall": {
+      "Normal": 91.34,
+      "Watch": 74.38,
+      "Warning": 86.29,
+      "Critical": 87.72
+    },
+    "Per_Class_F1": {
+      "Normal": 93.03,
+      "Watch": 75.25,
+      "Warning": 77.44,
+      "Critical": 82.84
+    },
+    "Features_Count": 14,
+    "Features_List": [
+      "Engine_RPM",
+      "EGT1",
+      "EGT2",
+      "EGT3",
+      "EGT4",
+      "CHT",
+      "Oil_Temp",
+      "Oil_Pressure",
+      "Battery_Voltage",
+      "Battery_Current",
+      "Alternator_Temp",
+      "EFI_Fuel_Temp",
+      "EFI_Water_Temp",
+      "MAP_Injector"
+    ]
+  },
+  "best_feature_set": "Exp_G_All_Combined (Physics + Asymmetry + Temporal + Environmental)",
+  "best_model_architecture": "HistGradientBoosting with Dynamic Physics Residuals & Cylinder Spread",
+  "best_metrics": {
+    "Accuracy": 86.84,
+    "Balanced_Accuracy": 83.64,
+    "Macro_F1": 81.22,
+    "Critical_Recall": 84.95,
+    "Critical_Precision": 76.01,
+    "Critical_F1": 80.23,
+    "Critical_FNR": 15.05,
+    "GroupKFold_Mean": 88.65,
+    "GroupKFold_Std": 4.83,
+    "Inference_Latency_ms": 0.00499,
+    "Model_Size_KB": 1163.8,
+    "Confusion_Matrix": [
+      [
+        17651,
+        1179,
+        13,
+        2
+      ],
+      [
+        1032,
+        5733,
+        1165,
+        16
+      ],
+      [
+        3,
+        287,
+        2762,
+        244
+      ],
+      [
+        7,
+        0,
+        140,
+        830
+      ]
+    ],
+    "Per_Class_Recall": {
+      "Normal": 93.66,
+      "Watch": 72.15,
+      "Warning": 83.8,
+      "Critical": 84.95
+    },
+    "Per_Class_F1": {
+      "Normal": 94.04,
+      "Watch": 75.71,
+      "Warning": 74.89,
+      "Critical": 80.23
+    },
+    "Features_Count": 34,
+    "Features_List": [
+      "Engine_RPM",
+      "EGT1",
+      "EGT2",
+      "EGT3",
+      "EGT4",
+      "CHT",
+      "Oil_Temp",
+      "Oil_Pressure",
+      "Battery_Voltage",
+      "Battery_Current",
+      "Alternator_Temp",
+      "EFI_Fuel_Temp",
+      "EFI_Water_Temp",
+      "MAP_Injector",
+      "res_CHT",
+      "res_EGT_avg",
+      "res_Oil_Pressure",
+      "res_Oil_Temp",
+      "res_MAP",
+      "EGT_spread",
+      "EGT_std",
+      "EGT1_dev",
+      "EGT2_dev",
+      "EGT3_dev",
+      "EGT4_dev",
+      "Thermal_Lift",
+      "Specific_Power_Index",
+      "RPM_roll_std_5",
+      "CHT_slope_10",
+      "EGT_slope_10",
+      "OilP_slope_10",
+      "res_CHT_slope_10",
+      "Vibration_Proxy",
+      "Vibration_Kurtosis_Proxy"
+    ]
+  },
+  "relative_improvements": {
+    "accuracy_delta": 0.49,
+    "balanced_acc_delta": -1.29,
+    "macro_f1_delta": -0.92,
+    "critical_recall_delta": -2.77,
+    "critical_fnr_reduction": -2.77
+  },
+  "recommendation_verdict": "UPGRADE_WITH_FULL_FEATURE_PIPELINE"
+}

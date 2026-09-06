@@ -383,17 +383,18 @@
         torus: uploadMesh(this.gl, makeTorus(32, 16))
       };
       this.telemetry = {
-        rpm: 3000,
-        throttle: 60,
-        cht: 220,
-        egt: 1200,
-        oilPressure: 60,
-        oilTemp: 90,
-        fuelFlow: 20,
-        vibration: 1.02,
+        rpm: 0,
+        throttle: 0,
+        cht: 75,
+        egt: 75,
+        oilPressure: 0,
+        oilTemp: 75,
+        fuelFlow: 0,
+        vibration: 0.0,
         busVoltage: 28.2,
-        health: 98,
-        fault: 'none'
+        health: 100,
+        fault: 'none',
+        engineState: 'ENGINE_OFF'
       };
       this.mode = 'normal';
       this.paused = false;
@@ -411,7 +412,7 @@
       this.configureGl();
       this.bindInteractions();
       this.bindControls();
-      
+
       this.resizeObserver = new ResizeObserver(() => this.resize());
       if (canvas.parentElement) {
         this.resizeObserver.observe(canvas.parentElement);
@@ -465,6 +466,8 @@
         if (Number.isFinite(value)) this.telemetry[key] = value;
       });
       if (data.fault != null) this.telemetry.fault = String(data.fault);
+      if (data.engineState != null) this.telemetry.engineState = String(data.engineState);
+      if (data.engine_run_state != null) this.telemetry.engineState = String(data.engine_run_state);
       this.updateHud();
       this.updateInspector();
       this.updateThermalField();
@@ -673,7 +676,7 @@
 
           // Cylinder Barrel
           add('cylinder', 'cylinders', `Cylinder ${cylinderIndex + 1}`, [x, 0.3, barrelZ], [0, 0, 0], [1.2, 1.2, 1.72], color, { alpha: housingAlpha, glow: hotFault ? 0.95 : thermal ? 0.32 : 0, pick: true });
-          
+
           // Cylinder Cooling Fin Rings
           [-0.4, -0.1, 0.2, 0.5].forEach(finOffset => {
             add('torus', 'cylinders', `Cooling Fin ${cylinderIndex + 1}`, [x, 0.3, barrelZ + finOffset * side], [0, 0, 0], [1.32, 1.32, 0.25], metal, { alpha: housingAlpha });
@@ -681,7 +684,7 @@
 
           // Cylinder Head
           add('cylinder', 'cylinders', `Cylinder head ${cylinderIndex + 1}`, [x, 0.3, headZ], [0, 0, 0], [1.48, 1.48, 0.55], color, { glow: hotFault ? 1 : thermal ? 0.4 : 0 });
-          
+
           if (thermal) {
             add('sphere', 'cylinders', `Cylinder ${cylinderIndex + 1} thermal envelope`, [x, 0.3, headZ], [0, 0, 0], [1.55, 1.55, 0.95], color, {
               alpha: 0.045 + thermalIntensity * 0.065,
@@ -801,8 +804,13 @@
       this.lastTime = time;
       this.resize();
       if (!this.paused && !this.reducedMotion) {
-        const revolutionsPerSecond = clamp(this.telemetry.rpm / 60, 5, 95);
-        this.crankAngle = (this.crankAngle + delta * revolutionsPerSecond * Math.PI * 0.32) % (Math.PI * 2);
+        const rawRpm = Number(this.telemetry.rpm) || 0;
+        const state = String(this.telemetry.engineState || '').toUpperCase();
+        const isRunning = rawRpm > 0 && state !== 'ENGINE_OFF' && state !== 'OFF';
+        if (isRunning) {
+          const revolutionsPerSecond = clamp(rawRpm / 60, 0, 95);
+          this.crankAngle = (this.crankAngle + delta * revolutionsPerSecond * Math.PI * 0.32) % (Math.PI * 2);
+        }
       }
       this.explodeAmount += ((this.exploded ? 1 : 0) - this.explodeAmount) * Math.min(1, delta * 5);
 

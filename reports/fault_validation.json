@@ -1,0 +1,138 @@
+{
+  "framework": "Physically Coupled Digital Twin Fault Propagation Architecture",
+  "supported_fault_modes": {
+    "thermal_overheating": {
+      "physical_mechanism": "Cooling airflow reduction / heat rejection deficit causing thermal accumulation in cylinder head mass",
+      "governing_equation": "C_th * d(CHT)/dt = Q_combustion - h_conv * A * (CHT - T_amb) - Q_cooling_deficit",
+      "affected_parameters": [
+        "CHT",
+        "Oil_Temp",
+        "EGT1_4"
+      ],
+      "observable_telemetry": [
+        "CHT rises +45 \u00b0F",
+        "Oil_Temp rises +25 \u00b0F",
+        "Thermal lift increases",
+        "res_CHT exceeds +3.0 sigma"
+      ],
+      "progression_stages": [
+        "HEALTHY (0-1.0 sigma)",
+        "EARLY (1.5-2.0 sigma)",
+        "DEVELOPING (2.0-3.0 sigma)",
+        "SEVERE (3.0-4.5 sigma)",
+        "CRITICAL (>4.5 sigma)"
+      ],
+      "justification_class": "PHYSICS-JUSTIFIED"
+    },
+    "injector_degradation": {
+      "physical_mechanism": "Fuel injector nozzle clogging / solenoid latency reducing mass fuel delivery per stroke to specific cylinder",
+      "governing_equation": "m_fuel_actual = m_fuel_cmd * (1 - degradation_factor)",
+      "affected_parameters": [
+        "EGT_spread",
+        "EGT_std",
+        "Fuel_Flow",
+        "MAP_Injector"
+      ],
+      "observable_telemetry": [
+        "Specific cylinder EGT drops 80-150 \u00b0F",
+        "EGT_spread jumps >120 \u00b0F",
+        "MAP slightly increases as governor compensates"
+      ],
+      "progression_stages": [
+        "HEALTHY",
+        "EARLY",
+        "DEVELOPING",
+        "SEVERE",
+        "CRITICAL"
+      ],
+      "justification_class": "PHYSICS-JUSTIFIED"
+    },
+    "cylinder_misfire": {
+      "physical_mechanism": "Ignition spark failure or severe lean blowout preventing combustion in single cylinder",
+      "governing_equation": "eta_comb = 0 for cylinder i -> Brake Power = 3/4 * P_nominal - P_friction",
+      "affected_parameters": [
+        "EGT_i",
+        "EGT_spread",
+        "Engine_RPM_ripple",
+        "Vibration_Kurtosis"
+      ],
+      "observable_telemetry": [
+        "EGT_i collapses to intake temp",
+        "EGT_spread >250 \u00b0F",
+        "RPM variance increases 400%",
+        "Kurtosis proxy >5.5"
+      ],
+      "progression_stages": [
+        "HEALTHY",
+        "EARLY (Intermittent)",
+        "DEVELOPING",
+        "SEVERE",
+        "CRITICAL (Complete Misfire)"
+      ],
+      "justification_class": "PHYSICS-JUSTIFIED"
+    },
+    "lubrication_degradation": {
+      "physical_mechanism": "Oil pump pressure drop / viscosity shear thinning / oil cooler fouling",
+      "governing_equation": "d(OilP)/dt = -k_deg * OilP_nom, Friction_loss = mu(Oil_Temp) * (RPM)^1.5",
+      "affected_parameters": [
+        "Oil_Pressure",
+        "Oil_Temp",
+        "Friction_BHP"
+      ],
+      "observable_telemetry": [
+        "Oil_Pressure drops -15 to -30 PSI",
+        "Oil_Temp rises +20 \u00b0F",
+        "res_Oil_Pressure < -3.5 sigma"
+      ],
+      "progression_stages": [
+        "HEALTHY",
+        "EARLY",
+        "DEVELOPING",
+        "SEVERE",
+        "CRITICAL"
+      ],
+      "justification_class": "PHYSICS-JUSTIFIED"
+    },
+    "sensor_drift_and_bias": {
+      "physical_mechanism": "Thermocouple calibration drift or ADC reference shift without physical engine change",
+      "governing_equation": "Sensor_read = Sensor_true + delta_drift(t), Engine_Physics_State = Constant",
+      "affected_parameters": [
+        "Single sensor channel only (e.g. CHT)"
+      ],
+      "observable_telemetry": [
+        "Single sensor deviates while cross-coupled sensors (EGT, OilT) remain nominal",
+        "Cross-sensor consistency score drops",
+        "Sensor trust drops to UNTRUSTED"
+      ],
+      "progression_stages": [
+        "NOMINAL",
+        "SUSPECT",
+        "DEGRADED",
+        "UNTRUSTED",
+        "FAILED"
+      ],
+      "justification_class": "PHYSICS-JUSTIFIED"
+    },
+    "sensor_dropout": {
+      "physical_mechanism": "Open circuit / CAN packet loss causing sensor reading to drop to zero or NaN",
+      "governing_equation": "Sensor_read = 0.0 or last_known_value (stuck)",
+      "affected_parameters": [
+        "Single sensor channel"
+      ],
+      "observable_telemetry": [
+        "Instantaneous step to 0 or flatline rate of change",
+        "Sensor health flags sensor fault",
+        "Engine state unaffected"
+      ],
+      "progression_stages": [
+        "NOMINAL",
+        "FAILED"
+      ],
+      "justification_class": "PHYSICS-JUSTIFIED"
+    }
+  },
+  "reproducible_trajectories_available": 10,
+  "metadata_provenance": {
+    "synthetic_data_disclaimer": "Synthetic fault trajectories are physically grounded in thermo-fluid first principles and calibrated against NASA ACES nominal operating bounds. They are labeled as PROGNOSTIC / SIMULATION ESTIMATES and never conflated with real run-to-failure ground truth."
+  }
+}

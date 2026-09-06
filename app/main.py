@@ -6,6 +6,7 @@ import json
 from typing import Any, Dict, List, Optional
 
 import pandas as pd
+import numpy as np
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -35,6 +36,7 @@ from .simulator import FAULTS, inject_fault, mission_adjust
 from .telemetry import telemetry_from_engine
 from .uav_mission import UAVMissionSimulator
 from .vibration import VibrationAI, load_demo as load_vibration_demo
+from .validation import AeroPulseValidator
 
 
 _GPS = SimulatedGPSSource()
@@ -314,11 +316,44 @@ def _build_live_engine_data(
         ),
     )
 
-    rpm = 3000.0 * (
-        0.92 + 0.12 * throttle
-    )
+    phase = str(getattr(mission_point, "mission_phase", "CRUISE")).upper()
 
-    return _ENGINE.simulate(
+    if phase in ["GROUND", "PREFLIGHT", "OFF", "STATIONARY"]:
+        run_state = "ENGINE_OFF"
+        rpm = 0.0
+    elif phase in ["STARTING", "CRANKING", "IGNITION"]:
+        run_state = "ENGINE_STARTING"
+        rpm = 800.0
+    elif phase in ["STOPPING", "COOLDOWN", "SHUTDOWN"]:
+        run_state = "ENGINE_STOPPING"
+        rpm = 400.0
+    else:
+        run_state = "ENGINE_RUNNING"
+        rpm = 3000.0 * (
+            0.92 + 0.12 * throttle
+        )
+
+    if run_state == "ENGINE_OFF":
+        data = _ENGINE.simulate(
+            rpm=0.0,
+            throttle=0.0,
+            altitude_ft=float(
+                mission_point.altitude_ft
+            ),
+            ambient_c=float(
+                mission_point.ambient_c
+            ),
+            load=0.0,
+        )
+        data["Engine_RPM"] = 0.0
+        data["Fuel_Flow"] = 0.0
+        data["Brake_Power_kW"] = 0.0
+        data["Indicated_Power_kW"] = 0.0
+        data["Vibration"] = 0.0
+        data["engine_run_state"] = "ENGINE_OFF"
+        return data
+
+    data = _ENGINE.simulate(
         rpm=rpm,
         throttle=throttle,
         altitude_ft=float(
@@ -329,6 +364,11 @@ def _build_live_engine_data(
         ),
         load=load,
     )
+    if run_state in ["ENGINE_STARTING", "ENGINE_STOPPING"]:
+        data["Engine_RPM"] = round(rpm, 1)
+        data["Brake_Power_kW"] = 0.0
+    data["engine_run_state"] = run_state
+    return data
 
 
 def _apply_live_fault(
@@ -476,6 +516,280 @@ def status():
 def reload_assets():
     _load_assets()
     return status()
+
+
+@app.get("/api/v1/validation/sil")
+def validation_sil():
+    """Runs Phase C2 Virtual Hardware and Software-in-the-Loop emulation validation suite."""
+    return AeroPulseValidator().validate_virtual_hardware_sil()
+
+
+@app.get("/api/v1/validation/master")
+def validation_master():
+    """Runs formal master validation across all project boundaries."""
+    return AeroPulseValidator().generate_master_report()
+
+
+@app.get("/api/v1/validation/engine")
+def validation_engine():
+    """Runs Phase A engine model validation harness."""
+    return AeroPulseValidator().validate_engine_model()
+
+
+@app.get("/api/v1/validation/hil")
+def validation_hil():
+    """Runs Phase B Virtual ECU/FADEC CAN HIL validation harness."""
+    return AeroPulseValidator().validate_virtual_ecu_fadec_hil()
+
+
+@app.get("/api/v1/validation/edge")
+def validation_edge():
+    """Runs Phase C edge compute deployment and benchmarking suite."""
+    return AeroPulseValidator().validate_edge_compute_embedded()
+
+
+@app.get("/api/v1/validation/rul")
+def validation_rul():
+    """Runs Phase D RUL and prognostics validation suite."""
+    return AeroPulseValidator().validate_rul_prognostics_full()
+
+
+# =========================================================================
+# VIRTUAL DATA LABORATORY & CANONICAL TELEMETRY APIS
+# =========================================================================
+
+class GenerateDataRequest(BaseModel):
+    category: str = Field("degradation", description="healthy, degradation, sensor_fault, mission")
+    scenario_type: str = Field("thermal", description="thermal, lubrication, mechanical, injector, misfire, electrical, compound, bias, drift, noise")
+    duration_hours: float = Field(30.0, ge=0.5, le=100.0)
+    ambient_c: float = Field(25.0, ge=-50.0, le=70.0)
+    altitude_ft: float = Field(5000.0, ge=0.0, le=45000.0)
+    severity: float = Field(0.60, ge=0.0, le=1.0)
+    seed: Optional[int] = 42
+
+
+from .data_engine import FAILURE_HEALTH_THRESHOLD, VirtualDataLabEngine
+from .dataset_registry import DatasetRegistry
+from .data_validator import DataQualityValidator
+from .data_replay import ClosedLoopReplayEngine
+
+
+class ReplayDataRequest(BaseModel):
+    trajectory_id: Optional[str] = None
+    custom_points: Optional[List[Dict[str, Any]]] = None
+    seed: Optional[int] = 42
+
+
+@app.get("/api/v1/data/catalog")
+def get_data_catalog():
+    """Returns dataset registry metadata and provenance for all primary and proxy datasets."""
+    return DatasetRegistry().get_summary()
+
+
+@app.get("/api/v1/data/health")
+def get_data_health():
+    """Returns operational status of the Virtual Data Laboratory generation and replay engine."""
+    return {
+        "status": "OPERATIONAL",
+        "schema_version": "2.0.0",
+        "engine": "AeroPulse-X Virtual Data Laboratory",
+        "capabilities": [
+            "Canonical Telemetry Schema v2.0",
+            "Multi-Phase Healthy Trajectory Generation",
+            "Continuous Progressive Degradation Kinetics (H_failure=35.0)",
+            "Physically Coupled Fault Injection",
+            "Isolated Transducer Sensor Faults",
+            "Mission & Environmental Dynamic Coupling",
+            "Virtual CAN 2.0B Communication Traces",
+            "Virtual ECU / FADEC Supervisory Logging",
+            "Virtual Flight Computer Resource Scheduling",
+            "Trajectory-Level Zero-Leakage Splitting",
+            "Closed-Loop Full Pipeline Replay",
+        ],
+        "compliance": "NASA PCoE & IEEE PHM Verification Standards (Software-Only Demonstrator)",
+    }
+
+
+@app.get("/api/v1/data/trajectory/{trajectory_id}")
+def get_data_trajectory(trajectory_id: str, seed: int = 42):
+    """Retrieves or deterministically generates canonical time-series points for a trajectory ID."""
+    from .data_engine import VirtualDataLabEngine
+    engine = VirtualDataLabEngine(master_seed=seed)
+    tid = trajectory_id.upper()
+
+    if "HEALTHY" in tid or "NOMINAL" in tid:
+        pts = engine.generate_healthy_trajectory(trajectory_id=trajectory_id, seed=seed)
+    elif "SENS" in tid or "SENSOR" in tid:
+        pts = engine.generate_sensor_fault_trajectory(trajectory_id=trajectory_id, seed=seed)
+    elif "MSN" in tid or "MISSION" in tid:
+        pts = engine.generate_mission_trajectory(trajectory_id=trajectory_id, seed=seed)
+    else:
+        # Default to degradation
+        mode = "thermal"
+        for m in ("thermal", "lubrication", "mechanical", "injector", "misfire", "electrical", "compound"):
+            if m.upper() in tid:
+                mode = m
+                break
+        pts = engine.generate_degradation_trajectory(trajectory_id=trajectory_id, failure_mode=mode, seed=seed)
+
+    return {
+        "trajectory_id": trajectory_id,
+        "sample_count": len(pts),
+        "schema_version": "2.0.0",
+        "points": [pt.to_dict() for pt in pts],
+    }
+
+
+@app.post("/api/v1/data/generate")
+def generate_custom_data(req: GenerateDataRequest):
+    """Generates custom multivariate time-series trajectory based on user request parameters."""
+    from .data_engine import VirtualDataLabEngine
+    engine = VirtualDataLabEngine(master_seed=req.seed or 42)
+    tid = f"TRAJ_CUSTOM_{req.category.upper()}_{req.scenario_type.upper()}_001"
+
+    if req.category == "healthy":
+        pts = engine.generate_healthy_trajectory(
+            trajectory_id=tid,
+            duration_hours=req.duration_hours,
+            ambient_c=req.ambient_c,
+            seed=req.seed,
+        )
+    elif req.category == "sensor_fault":
+        pts = engine.generate_sensor_fault_trajectory(
+            trajectory_id=tid,
+            sensor_fault_type=req.scenario_type,
+            duration_hours=req.duration_hours,
+            severity=req.severity,
+            seed=req.seed,
+        )
+    elif req.category == "mission":
+        pts = engine.generate_mission_trajectory(
+            trajectory_id=tid,
+            mission_type=req.scenario_type,
+            seed=req.seed,
+        )
+    else:
+        pts = engine.generate_degradation_trajectory(
+            trajectory_id=tid,
+            failure_mode=req.scenario_type,
+            duration_hours=req.duration_hours,
+            altitude_ft=req.altitude_ft,
+            ambient_c=req.ambient_c,
+            seed=req.seed,
+        )
+
+    return {
+        "trajectory_id": tid,
+        "category": req.category,
+        "scenario_type": req.scenario_type,
+        "sample_count": len(pts),
+        "points": [pt.to_dict() for pt in pts],
+    }
+
+
+@app.post("/api/v1/data/replay")
+def replay_data_trajectory(req: ReplayDataRequest):
+    """Executes closed-loop replay through the complete SIL avionics and digital twin pipeline."""
+    from .data_engine import VirtualDataLabEngine
+    from .data_schema import CanonicalTelemetryPoint
+    from .data_replay import ClosedLoopReplayEngine
+
+    engine = VirtualDataLabEngine(master_seed=req.seed or 42)
+    replay_eng = ClosedLoopReplayEngine(master_seed=req.seed or 42)
+
+    if req.custom_points:
+        points = [CanonicalTelemetryPoint.from_dict(p) for p in req.custom_points]
+    else:
+        tid = req.trajectory_id or "TRAJ_DEG_THERMAL_001"
+        pts_dict = get_data_trajectory(trajectory_id=tid, seed=req.seed or 42)
+        points = [CanonicalTelemetryPoint.from_dict(p) for p in pts_dict["points"]]
+
+    summary = replay_eng.replay_trajectory(points)
+    return summary.to_dict()
+
+
+@app.get("/api/v1/data/quality")
+def audit_data_quality(seed: int = 42):
+    """Runs automated data-quality validation and trajectory leakage audit across generated corpus."""
+    from .data_engine import VirtualDataLabEngine
+    from .data_validator import DataQualityValidator
+
+    engine = VirtualDataLabEngine(master_seed=seed)
+    corpus = engine.generate_master_corpus(num_healthy=10, num_degradation=15, num_sensor_faults=8, num_missions=5, master_seed=seed)
+    train_dict, test_dict = engine.split_corpus_trajectories(corpus, train_ratio=0.70, seed=seed)
+
+    report = DataQualityValidator.audit_corpus(corpus=corpus, train_dict=train_dict, test_dict=test_dict)
+    return report.to_dict()
+
+
+@app.get("/api/v1/data/statistics")
+def get_data_statistics(seed: int = 42):
+    """Computes statistical telemetry distributions and actual materialized corpus counts."""
+    from .data_engine import VirtualDataLabEngine
+    engine = VirtualDataLabEngine(master_seed=seed)
+    stats = engine.get_materialized_corpus_statistics(master_seed=seed)
+    
+    corpus = engine.generate_master_corpus(
+        num_healthy=20,
+        num_degradation=35,
+        num_sensor_faults=15,
+        num_missions=10,
+        num_can_faults=10,
+        master_seed=seed,
+    )
+    all_points = []
+    for pts in corpus.values():
+        all_points.extend(pts)
+
+    rpms = [p.RPM for p in all_points]
+    chts = [p.CHT for p in all_points]
+    oil_press = [p.oil_pressure for p in all_points]
+    healths = [p.health_index for p in all_points]
+    voltages = [p.bus_voltage for p in all_points]
+
+    stats["metrics"] = {
+        "RPM": {"mean": round(float(np.mean(rpms)), 1), "std": round(float(np.std(rpms)), 1), "min": round(float(np.min(rpms)), 1), "max": round(float(np.max(rpms)), 1)},
+        "CHT_degC": {"mean": round(float(np.mean(chts)), 1), "std": round(float(np.std(chts)), 1), "min": round(float(np.min(chts)), 1), "max": round(float(np.max(chts)), 1)},
+        "Oil_Pressure_psi": {"mean": round(float(np.mean(oil_press)), 1), "std": round(float(np.std(oil_press)), 1), "min": round(float(np.min(oil_press)), 1), "max": round(float(np.max(oil_press)), 1)},
+        "Health_Index": {"mean": round(float(np.mean(healths)), 1), "std": round(float(np.std(healths)), 1), "min": round(float(np.min(healths)), 1), "max": round(float(np.max(healths)), 1)},
+        "Bus_Voltage_V": {"mean": round(float(np.mean(voltages)), 2), "std": round(float(np.std(voltages)), 2), "min": round(float(np.min(voltages)), 2), "max": round(float(np.max(voltages)), 2)},
+    }
+    return stats
+
+
+@app.get("/api/v1/data/ground-truth/{trajectory_id}")
+def get_trajectory_ground_truth(trajectory_id: str, seed: int = 42):
+    """Returns exact failure timestamp, RUL curve, and degradation kinetic parameters for a trajectory."""
+    data = get_data_trajectory(trajectory_id=trajectory_id, seed=seed)
+    points = data["points"]
+    
+    gt_curve = []
+    failure_time = None
+    failure_mode = "none"
+
+    for p in points:
+        if p.get("true_failure_time") is not None and failure_time is None:
+            failure_time = p["true_failure_time"]
+            failure_mode = p.get("failure_mode", "thermal")
+        gt_curve.append({
+            "timestamp_s": p["timestamp"],
+            "time_hours": round(p["timestamp"] / 3600.0, 3),
+            "health_index": p["health_index"],
+            "true_RUL_hours": p["true_RUL"],
+            "predicted_RUL_hours": p["predicted_RUL"],
+            "RUL_lower_hours": p["RUL_lower"],
+            "RUL_upper_hours": p["RUL_upper"],
+        })
+
+    return {
+        "trajectory_id": trajectory_id,
+        "failure_health_threshold": FAILURE_HEALTH_THRESHOLD,
+        "true_failure_time_hours": failure_time,
+        "failure_mode": failure_mode,
+        "ground_truth_methodology": "Mathematical ODE forward integration to H(t) = 35.0 (y_true = max(0, t_failure - t))",
+        "sample_count": len(gt_curve),
+        "ground_truth_curve": gt_curve,
+    }
 
 
 @app.get("/api/sample")
@@ -772,6 +1086,33 @@ def vibration_demo(
     )
 
     return result
+
+
+@app.get("/api/v1/validation/engine-model")
+def engine_model_validation():
+    """Returns formal engine model validation, provenance, sensitivity, and uncertainty metrics."""
+    from .engine_validation import EngineModelValidator
+
+    validator = EngineModelValidator(_ENGINE)
+    return validator.generate_full_validation_summary()
+
+
+@app.get("/api/v1/validation/ecu-fadec-hil")
+def ecu_fadec_hil_validation():
+    """Returns formal Virtual ECU/FADEC CAN HIL validation scenario matrix and latency statistics."""
+    from .can_hil import CANHILSimulator
+
+    simulator = CANHILSimulator()
+    return simulator.run_master_hil_validation_suite()
+
+
+@app.get("/api/v1/validation/edge")
+def edge_compute_validation():
+    """Returns edge compute deployment profile, stage latency percentiles, throughput, and hardware classification."""
+    from .edge_benchmark import run_benchmark_and_get_summary
+
+    report = run_benchmark_and_get_summary(samples=1000, warmup=100)
+    return report.to_dict()
 
 
 @app.websocket("/ws/telemetry")

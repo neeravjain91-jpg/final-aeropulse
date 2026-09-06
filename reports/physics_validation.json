@@ -1,0 +1,262 @@
+{
+  "evaluation_protocol": "Fit on 10 ACES Training Flights, Evaluated Strictly on 4 Completely Held-Out Flights",
+  "held_out_flights": [
+    "aces1am_2002_191",
+    "aces1am_2002_224",
+    "aces1am_2002_225",
+    "aces1am_2002_237"
+  ],
+  "held_out_samples": 31064,
+  "metrics_before_calibration": {
+    "CHT": {
+      "MAE": 15.62,
+      "RMSE": 21.31,
+      "MAPE_percent": 8.84,
+      "Max_Absolute_Error": 137.25,
+      "Mean_Actual": 197.49,
+      "Mean_Predicted": 198.56
+    },
+    "EGT1": {
+      "MAE": 92.27,
+      "RMSE": 181.23,
+      "MAPE_percent": 15.59,
+      "Max_Absolute_Error": 1268.72,
+      "Mean_Actual": 1227.45,
+      "Mean_Predicted": 1294.53
+    },
+    "Oil_Temp": {
+      "MAE": 25.57,
+      "RMSE": 31.22,
+      "MAPE_percent": 18.22,
+      "Max_Absolute_Error": 100.1,
+      "Mean_Actual": 155.62,
+      "Mean_Predicted": 168.85
+    },
+    "Oil_Pressure": {
+      "MAE": 9.41,
+      "RMSE": 11.56,
+      "MAPE_percent": 15.7,
+      "Max_Absolute_Error": 24.8,
+      "Mean_Actual": 62.65,
+      "Mean_Predicted": 70.2
+    },
+    "MAP_Injector": {
+      "MAE": 10.52,
+      "RMSE": 11.09,
+      "MAPE_percent": 63.08,
+      "Max_Absolute_Error": 19.76,
+      "Mean_Actual": 23.68,
+      "Mean_Predicted": 21.13
+    },
+    "Fuel_Flow": {
+      "MAE": 22.05,
+      "RMSE": 23.23,
+      "MAPE_percent": 171.71,
+      "Max_Absolute_Error": 41.18,
+      "Mean_Actual": 32.55,
+      "Mean_Predicted": 31.1
+    }
+  },
+  "metrics_after_calibration": {
+    "CHT": {
+      "MAE": 14.91,
+      "RMSE": 20.8,
+      "MAPE_percent": 8.5,
+      "Max_Absolute_Error": 136.25,
+      "Mean_Actual": 197.49,
+      "Mean_Predicted": 198.45
+    },
+    "EGT1": {
+      "MAE": 77.91,
+      "RMSE": 169.61,
+      "MAPE_percent": 14.19,
+      "Max_Absolute_Error": 1169.12,
+      "Mean_Actual": 1227.45,
+      "Mean_Predicted": 1290.57
+    },
+    "Oil_Temp": {
+      "MAE": 25.11,
+      "RMSE": 30.6,
+      "MAPE_percent": 17.97,
+      "Max_Absolute_Error": 98.9,
+      "Mean_Actual": 155.62,
+      "Mean_Predicted": 169.53
+    },
+    "Oil_Pressure": {
+      "MAE": 7.49,
+      "RMSE": 8.86,
+      "MAPE_percent": 12.41,
+      "Max_Absolute_Error": 22.0,
+      "Mean_Actual": 62.65,
+      "Mean_Predicted": 68.28
+    },
+    "MAP_Injector": {
+      "MAE": 5.36,
+      "RMSE": 6.61,
+      "MAPE_percent": 33.25,
+      "Max_Absolute_Error": 23.99,
+      "Mean_Actual": 23.68,
+      "Mean_Predicted": 21.09
+    },
+    "Fuel_Flow": {
+      "MAE": 17.84,
+      "RMSE": 19.21,
+      "MAPE_percent": 170.38,
+      "Max_Absolute_Error": 41.36,
+      "Mean_Actual": 32.55,
+      "Mean_Predicted": 36.65
+    }
+  },
+  "error_by_operating_state": {
+    "CRUISE": {
+      "CHT": {
+        "MAE": 19.95,
+        "RMSE": 21.95,
+        "MAPE_percent": 10.48,
+        "Max_Absolute_Error": 67.56,
+        "Mean_Actual": 196.85,
+        "Mean_Predicted": 188.63
+      },
+      "EGT1": {
+        "MAE": 71.79,
+        "RMSE": 102.08,
+        "MAPE_percent": 6.29,
+        "Max_Absolute_Error": 546.24,
+        "Mean_Actual": 1247.27,
+        "Mean_Predicted": 1275.07
+      },
+      "Oil_Temp": {
+        "MAE": 26.81,
+        "RMSE": 29.88,
+        "MAPE_percent": 16.97,
+        "Max_Absolute_Error": 57.9,
+        "Mean_Actual": 159.73,
+        "Mean_Predicted": 159.78
+      },
+      "Oil_Pressure": {
+        "MAE": 8.91,
+        "RMSE": 10.15,
+        "MAPE_percent": 15.47,
+        "Max_Absolute_Error": 20.7,
+        "Mean_Actual": 60.58,
+        "Mean_Predicted": 68.43
+      },
+      "MAP_Injector": {
+        "MAE": 9.1,
+        "RMSE": 9.84,
+        "MAPE_percent": 52.57,
+        "Max_Absolute_Error": 23.99,
+        "Mean_Actual": 21.8,
+        "Mean_Predicted": 18.54
+      },
+      "Fuel_Flow": {
+        "MAE": 15.72,
+        "RMSE": 18.84,
+        "MAPE_percent": 186.68,
+        "Max_Absolute_Error": 36.37,
+        "Mean_Actual": 26.76,
+        "Mean_Predicted": 36.95
+      }
+    },
+    "CRUISE_LOW": {
+      "CHT": {
+        "MAE": 18.36,
+        "RMSE": 26.7,
+        "MAPE_percent": 11.67,
+        "Max_Absolute_Error": 136.25,
+        "Mean_Actual": 191.52,
+        "Mean_Predicted": 201.91
+      },
+      "EGT1": {
+        "MAE": 111.72,
+        "RMSE": 253.7,
+        "MAPE_percent": 28.86,
+        "Max_Absolute_Error": 1169.12,
+        "Mean_Actual": 1164.53,
+        "Mean_Predicted": 1266.83
+      },
+      "Oil_Temp": {
+        "MAE": 27.79,
+        "RMSE": 36.05,
+        "MAPE_percent": 22.69,
+        "Max_Absolute_Error": 98.9,
+        "Mean_Actual": 148.57,
+        "Mean_Predicted": 171.92
+      },
+      "Oil_Pressure": {
+        "MAE": 3.75,
+        "RMSE": 4.66,
+        "MAPE_percent": 5.92,
+        "Max_Absolute_Error": 16.7,
+        "Mean_Actual": 64.33,
+        "Mean_Predicted": 63.93
+      },
+      "MAP_Injector": {
+        "MAE": 4.92,
+        "RMSE": 6.1,
+        "MAPE_percent": 45.75,
+        "Max_Absolute_Error": 20.56,
+        "Mean_Actual": 13.26,
+        "Mean_Predicted": 12.0
+      },
+      "Fuel_Flow": {
+        "MAE": 19.0,
+        "RMSE": 19.97,
+        "MAPE_percent": 281.46,
+        "Max_Absolute_Error": 35.39,
+        "Mean_Actual": 10.99,
+        "Mean_Predicted": 28.54
+      }
+    },
+    "HIGH": {
+      "CHT": {
+        "MAE": 8.92,
+        "RMSE": 11.41,
+        "MAPE_percent": 4.36,
+        "Max_Absolute_Error": 68.43,
+        "Mean_Actual": 203.73,
+        "Mean_Predicted": 200.06
+      },
+      "EGT1": {
+        "MAE": 47.6,
+        "RMSE": 54.27,
+        "MAPE_percent": 3.73,
+        "Max_Absolute_Error": 114.07,
+        "Mean_Actual": 1279.56,
+        "Mean_Predicted": 1322.01
+      },
+      "Oil_Temp": {
+        "MAE": 21.6,
+        "RMSE": 24.47,
+        "MAPE_percent": 13.82,
+        "Max_Absolute_Error": 41.2,
+        "Mean_Actual": 160.49,
+        "Mean_Predicted": 172.16
+      },
+      "Oil_Pressure": {
+        "MAE": 10.48,
+        "RMSE": 11.04,
+        "MAPE_percent": 17.27,
+        "Max_Absolute_Error": 22.0,
+        "Mean_Actual": 62.04,
+        "Mean_Predicted": 72.5
+      },
+      "MAP_Injector": {
+        "MAE": 3.88,
+        "RMSE": 4.8,
+        "MAPE_percent": 10.98,
+        "Max_Absolute_Error": 15.11,
+        "Mean_Actual": 34.97,
+        "Mean_Predicted": 31.38
+      },
+      "Fuel_Flow": {
+        "MAE": 17.78,
+        "RMSE": 18.62,
+        "MAPE_percent": 54.3,
+        "Max_Absolute_Error": 41.36,
+        "Mean_Actual": 56.86,
+        "Mean_Predicted": 44.54
+      }
+    }
+  }
+}
