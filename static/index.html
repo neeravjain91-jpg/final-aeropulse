@@ -595,14 +595,17 @@ canvas#timeline{width:100%;height:200px;background:#060a06;border:1px solid #142
             <div class="engine-card-heading">
               <div>
                 <div style="font-size:13.5px; font-weight:700; color:#5eb574; display:flex; align-items:center; gap:5px;">
-                  <span>◈</span> 3D ENGINE DIGITAL TWIN
+                  <span>◈</span> 3D ENGINE DIGITAL TWIN & SIMULATOR
                 </div>
                 <div style="font-size:10px; color:#7a8c7b; margin-top:1px;">
-                  Inline 4-Cyl 4-Stroke Turbocharged Aero-Engine • Cutaway Kinematics & Thermal Envelope
+                  Inline 4-Cyl 4-Stroke Turbocharged Aero-Engine • Kinematics & Valve Timing Simulator
                 </div>
               </div>
-              <div class="engine-twin-state" id="engineTwinState">
-                DIGITAL TWIN SYNCHRONIZED
+              <div style="display:flex; align-items:center; gap:6px;">
+                <span id="engineModeLabel" style="font:800 9px/1 Inter, monospace; color:#5eb574; background:rgba(94,181,116,0.12); padding:3px 8px; border-radius:4px; border:1px solid rgba(94,181,116,0.3);">NORMAL</span>
+                <div class="engine-twin-state" id="engineTwinState">
+                  DIGITAL TWIN SYNCHRONIZED
+                </div>
               </div>
             </div>
 
@@ -643,11 +646,93 @@ canvas#timeline{width:100%;height:200px;background:#060a06;border:1px solid #142
               </div>
             </aside>
 
-            <!-- DOWNWARD: 3D PISTON ENGINE DIGITAL TWIN VIEWPORT -->
+            <!-- DOWNWARD: 3D PISTON ENGINE DIGITAL TWIN & INTERACTIVE SIMULATOR VIEWPORT -->
             <div class="engine-digital-twin">
               <div class="engine-viewport">
                 <canvas id="engineCanvas" aria-label="Interactive 3D model of an inline four-cylinder four-stroke turbocharged cutaway aero-engine"></canvas>
+                <canvas id="engineLabelsCanvas" class="engine-labels-overlay" aria-hidden="true"></canvas>
 
+                <!-- LEFT HUD: 2D KINEMATICS & PLAYBACK SCRUBBER -->
+                <div class="engine-hud-overlay-left">
+                  <div class="engine-diagram-card">
+                    <div class="engine-diagram-header">
+                      <span class="engine-diagram-title">Kinematics</span>
+                      <span id="simPhaseBadge" class="sim-phase-badge phase-intake">INTAKE</span>
+                    </div>
+                    <canvas id="diagramKinematicsCanvas" class="engine-diagram-canvas" width="220" height="85"></canvas>
+                    <div class="sim-controls-grid" style="margin-top:5px;">
+                      <div class="sim-btn-row">
+                        <button class="sim-btn" id="simPlayBtn" title="Play/Pause Simulation">⏸</button>
+                        <button class="sim-btn" id="simStepBack" title="Step -15°">-15°</button>
+                        <button class="sim-btn" id="simStepForward" title="Step +15°">+15°</button>
+                        <select class="sim-speed-select" id="simSpeedSelect" title="Playback Speed">
+                          <option value="1.0">1.0x Real</option>
+                          <option value="0.5">0.5x</option>
+                          <option value="0.25">0.25x</option>
+                          <option value="0.1">0.10x Slow-Mo</option>
+                        </select>
+                      </div>
+                      <div class="sim-scrubber-container">
+                        <input type="range" id="simScrubber" min="0" max="719" value="0" step="1" title="Scrub Crank Angle (0-720°)">
+                        <span class="sim-scrub-angle" id="simAngleReadout">0°</span>
+                      </div>
+                      <div style="display:flex; align-items:center; gap:4px;">
+                        <input type="range" id="simRpmSlider" min="0" max="6000" value="3000" step="50" style="flex:1; height:3px; accent-color:#5eb574;">
+                        <span style="font:800 8.5px/1 Inter, monospace; color:#a8bfa9; min-width:48px;" id="simRpmVal">3000 RPM</span>
+                        <button class="sim-btn active" id="simSyncRpmBtn" style="font-size:7.5px; padding:2px 4px;" title="Sync with Flight Telemetry">SYNC</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- RIGHT HUD: CYLINDER SELECTOR & SYNCHRONIZED DIAGRAMS -->
+                <div class="engine-hud-overlay-right">
+                  <div class="cyl-selector-bar">
+                    <button class="cyl-btn active" data-cylinder-focus="0">CYL 1</button>
+                    <button class="cyl-btn" data-cylinder-focus="1">CYL 2</button>
+                    <button class="cyl-btn" data-cylinder-focus="2">CYL 3</button>
+                    <button class="cyl-btn" data-cylinder-focus="3">CYL 4</button>
+                  </div>
+
+                  <div class="engine-diagram-card">
+                    <div class="engine-diagram-header">
+                      <span class="engine-diagram-title">Valve Timing & Lift</span>
+                      <span style="font:700 7.5px/1 Inter, monospace; color:#889c8a;">0–720°</span>
+                    </div>
+                    <canvas id="diagramValveCanvas" class="engine-diagram-canvas" width="220" height="70"></canvas>
+                  </div>
+
+                  <div class="engine-diagram-card">
+                    <div class="engine-diagram-header">
+                      <span class="engine-diagram-title">P-V Indicator Diagram</span>
+                      <span style="font:700 7.5px/1 Inter, monospace; color:#889c8a;">Pressure / Vol</span>
+                    </div>
+                    <canvas id="diagramPressureCanvas" class="engine-diagram-canvas" width="220" height="70"></canvas>
+                  </div>
+                </div>
+
+                <!-- BOTTOM CENTER: FIRING ORDER RIBBON -->
+                <div class="engine-firing-ribbon">
+                  <span class="firing-ribbon-title">FIRING ORDER 1-3-4-2:</span>
+                  <div class="firing-cyl-node" id="firingCyl1">
+                    <span class="firing-cyl-num">CYL 1</span>
+                    <span class="cyl-phase-label">INTAKE</span>
+                  </div>
+                  <div class="firing-cyl-node" id="firingCyl3">
+                    <span class="firing-cyl-num">CYL 3</span>
+                    <span class="cyl-phase-label">COMPR</span>
+                  </div>
+                  <div class="firing-cyl-node" id="firingCyl4">
+                    <span class="firing-cyl-num">CYL 4</span>
+                    <span class="cyl-phase-label">POWER</span>
+                  </div>
+                  <div class="firing-cyl-node" id="firingCyl2">
+                    <span class="firing-cyl-num">CYL 2</span>
+                    <span class="cyl-phase-label">EXHAUST</span>
+                  </div>
+                </div>
+
+                <!-- THERMAL FIELD OVERLAY -->
                 <div class="engine-thermal-field" id="engineThermalField" aria-hidden="true">
                   <div class="engine-thermal-aura engine-thermal-aura-outer"></div>
                   <div class="engine-thermal-aura engine-thermal-aura-core"></div>
@@ -661,31 +746,30 @@ canvas#timeline{width:100%;height:200px;background:#060a06;border:1px solid #142
 
                 <div class="engine-scanline" aria-hidden="true"></div>
                 <div class="engine-axis" aria-hidden="true"><span>X</span><span>Y</span><span>Z</span></div>
-
-                <div class="engine-hud engine-hud-left">
-                  <strong id="engineHudRpm">3,000 RPM</strong>
-                  <span id="engineHudCht">220°F CHT</span>
-                  <span id="engineHudEgt">1,200°F EGT</span>
-                </div>
-                <div class="engine-hud engine-hud-right">
-                  <strong id="engineModeLabel">NORMAL</strong>
-                  <span id="engineHudOil">60 PSI OIL</span>
-                  <span id="engineHudVibration">1.02 g RMS</span>
-                </div>
-                <div class="engine-help">DRAG ORBIT · WHEEL ZOOM · CLICK COMPONENT · DOUBLE-CLICK RESET</div>
               </div>
             </div>
 
-            <!-- CONTROLS TOOLBAR -->
+            <!-- CONTROLS TOOLBAR & CAMERA PRESETS -->
             <div class="engine-toolbar" aria-label="3D engine controls">
-              <button class="engine-tool active" data-engine-mode="normal">Normal</button>
-              <button class="engine-tool" data-engine-mode="thermal">Thermal</button>
-              <button class="engine-tool" data-engine-mode="vibration">Vibration</button>
-              <span class="engine-tool-separator"></span>
-              <button class="engine-tool" id="engineXray">X-ray</button>
-              <button class="engine-tool" id="engineExplode">Explode</button>
-              <button class="engine-tool" id="enginePause">Pause</button>
-              <button class="engine-tool" id="engineResetCamera">Reset View</button>
+              <div class="engine-toolbar-group">
+                <button class="engine-tool active" data-engine-mode="normal">Normal</button>
+                <button class="engine-tool" data-engine-mode="thermal">Thermal</button>
+                <button class="engine-tool" data-engine-mode="vibration">Vibration</button>
+                <span class="engine-tool-separator"></span>
+                <button class="engine-tool" id="engineXray">X-ray</button>
+                <button class="engine-tool" id="engineExplode">Explode</button>
+                <button class="engine-tool active" id="engineLabels">Labels</button>
+                <button class="engine-tool" id="enginePause">⏸ Pause</button>
+              </div>
+              <div class="engine-camera-presets">
+                <span style="font:800 8px/1 Inter, sans-serif; color:#7a8c7b; margin-right:2px;">CAMERA:</span>
+                <button class="camera-preset-btn active" data-camera-preset="hero">Hero</button>
+                <button class="camera-preset-btn" data-camera-preset="front">Front</button>
+                <button class="camera-preset-btn" data-camera-preset="top">Top</button>
+                <button class="camera-preset-btn" data-camera-preset="side">Side</button>
+                <button class="camera-preset-btn" data-camera-preset="cylinder">Cyl</button>
+                <button class="camera-preset-btn" id="engineResetCamera">↺ Reset</button>
+              </div>
             </div>
           </div>
         </div>

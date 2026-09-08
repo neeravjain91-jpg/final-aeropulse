@@ -4,6 +4,8 @@
   --gcs-amber: #c9983e;
   --gcs-red: #c94c48;
   --gcs-muted: #7a8c7b;
+  --gcs-bg-card: rgba(10, 18, 12, 0.85);
+  --gcs-border: #1a2c1d;
 }
 
 /* ============================================================
@@ -44,12 +46,12 @@
   background: rgba(217, 167, 74, 0.09);
 }
 
-/* Seamless Transparent 3D Engine Viewport - No Artificial Background or Border */
+/* Seamless Transparent 3D Engine Viewport */
 .engine-digital-twin {
   position: relative;
   width: 100%;
-  height: 420px;
-  min-height: 420px;
+  height: 520px;
+  min-height: 520px;
   border: none;
   border-radius: 0;
   overflow: hidden;
@@ -61,7 +63,7 @@
   position: relative;
   width: 100%;
   height: 100%;
-  min-height: 420px;
+  min-height: 520px;
   overflow: hidden;
   background: transparent;
   border: none;
@@ -79,10 +81,274 @@
   touch-action: none;
   image-rendering: -webkit-optimize-contrast;
   image-rendering: crisp-edges;
+  z-index: 1;
 }
 
 #engineCanvas:active {
   cursor: grabbing;
+}
+
+.engine-labels-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 4;
+}
+
+/* ============================================================
+   HUD Overlays & Synchronized Telemetry Panels
+   ============================================================ */
+.engine-hud-overlay-left {
+  position: absolute;
+  left: 10px;
+  top: 10px;
+  width: 240px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 6;
+  pointer-events: auto;
+}
+
+.engine-hud-overlay-right {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  width: 240px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 6;
+  pointer-events: auto;
+}
+
+.engine-diagram-card {
+  background: var(--gcs-bg-card);
+  border: 1px solid var(--gcs-border);
+  border-radius: 6px;
+  padding: 6px 8px;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+}
+
+.engine-diagram-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.engine-diagram-title {
+  color: var(--gcs-cyan);
+  font: 800 8.5px/1 Inter, sans-serif;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.engine-diagram-canvas {
+  width: 100%;
+  height: auto;
+  display: block;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(4, 8, 5, 0.7);
+  border-radius: 4px;
+}
+
+/* 4-Stroke Phase Badges */
+.sim-phase-badge {
+  padding: 2px 6px;
+  border-radius: 4px;
+  font: 800 8px/1 Inter, monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.phase-intake { color: #5eb574; background: rgba(94, 181, 116, 0.15); border: 1px solid rgba(94, 181, 116, 0.4); }
+.phase-compression { color: #e0b343; background: rgba(224, 179, 67, 0.15); border: 1px solid rgba(224, 179, 67, 0.4); }
+.phase-power { color: #ff5533; background: rgba(255, 85, 51, 0.2); border: 1px solid rgba(255, 85, 51, 0.5); box-shadow: 0 0 8px rgba(255, 85, 51, 0.3); }
+.phase-exhaust { color: #c94c48; background: rgba(201, 76, 72, 0.15); border: 1px solid rgba(201, 76, 72, 0.4); }
+
+/* Playback & Kinematic Scrubber Controls */
+.sim-controls-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sim-btn-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sim-btn {
+  background: #121e14;
+  border: 1px solid #233a26;
+  color: #a8bfa9;
+  border-radius: 4px;
+  padding: 3px 6px;
+  font: 700 9px/1 Inter, sans-serif;
+  cursor: pointer;
+  transition: all 120ms ease;
+}
+
+.sim-btn:hover {
+  background: #1a2c1d;
+  color: #fff;
+  border-color: var(--gcs-cyan);
+}
+
+.sim-btn.active {
+  background: rgba(94, 181, 116, 0.2);
+  color: var(--gcs-cyan);
+  border-color: var(--gcs-cyan);
+}
+
+.sim-scrubber-container {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sim-scrubber-container input[type=range] {
+  flex: 1;
+  height: 4px;
+  accent-color: var(--gcs-cyan);
+  cursor: ew-resize;
+}
+
+.sim-scrub-angle {
+  font: 800 9.5px/1 Inter, monospace;
+  color: #eaf5eb;
+  min-width: 32px;
+  text-align: right;
+}
+
+.sim-speed-select {
+  background: #0f1a11;
+  border: 1px solid #1f3322;
+  color: #a8bfa9;
+  font: 700 8.5px/1 Inter, sans-serif;
+  padding: 2px 4px;
+  border-radius: 3px;
+}
+
+/* Cylinder Selection Bar */
+.cyl-selector-bar {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+.cyl-btn {
+  flex: 1;
+  padding: 3px 0;
+  text-align: center;
+  background: #0f1a11;
+  border: 1px solid #1a2c1d;
+  color: #7a8c7b;
+  font: 800 8.5px/1 Inter, monospace;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.cyl-btn:hover {
+  color: #dbe5db;
+  border-color: #28442d;
+}
+
+.cyl-btn.active {
+  background: rgba(94, 181, 116, 0.18);
+  color: var(--gcs-cyan);
+  border-color: var(--gcs-cyan);
+}
+
+/* Firing Order Ribbon (Bottom Center) */
+.engine-firing-ribbon {
+  position: absolute;
+  left: 50%;
+  bottom: 8px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(8, 14, 9, 0.85);
+  border: 1px solid rgba(26, 44, 29, 0.8);
+  border-radius: 6px;
+  padding: 4px 10px;
+  backdrop-filter: blur(8px);
+  z-index: 6;
+}
+
+.firing-ribbon-title {
+  color: #7a8c7b;
+  font: 800 8px/1 Inter, sans-serif;
+  letter-spacing: 0.08em;
+}
+
+.firing-cyl-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 5px;
+  border-radius: 3px;
+  background: #101c12;
+  border: 1px solid #1c2e1f;
+  transition: all 150ms ease;
+}
+
+.firing-cyl-node.active-power {
+  background: rgba(255, 85, 51, 0.25);
+  border-color: #ff5533;
+  box-shadow: 0 0 10px rgba(255, 85, 51, 0.5);
+  transform: scale(1.06);
+}
+
+.firing-cyl-num {
+  font: 800 9px/1 Inter, monospace;
+  color: #eaf5eb;
+}
+
+.cyl-phase-label {
+  font: 700 7px/1 Inter, sans-serif;
+  color: #7a8c7b;
+}
+
+.firing-cyl-node.active-power .cyl-phase-label {
+  color: #ffaa55;
+  font-weight: 800;
+}
+
+/* Camera Presets Bar */
+.engine-camera-presets {
+  display: flex;
+  gap: 3px;
+  align-items: center;
+}
+
+.camera-preset-btn {
+  background: #101c12;
+  border: 1px solid #1f3322;
+  color: #7a8c7b;
+  font: 700 8.5px/1 Inter, sans-serif;
+  padding: 3px 6px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 120ms ease;
+}
+
+.camera-preset-btn:hover {
+  color: #fff;
+  border-color: var(--gcs-cyan);
+}
+
+.camera-preset-btn.active {
+  background: rgba(94, 181, 116, 0.2);
+  color: var(--gcs-cyan);
+  border-color: var(--gcs-cyan);
 }
 
 /* ============================================================
@@ -138,7 +404,7 @@
 .engine-thermal-scale {
   position: absolute;
   right: 12px;
-  bottom: 12px;
+  bottom: 45px;
   width: 190px;
   padding: 6px 8px;
   color: #dcebdc;
@@ -202,41 +468,6 @@
   font-size: 7px;
 }
 
-.engine-scanline {
-  display: none;
-}
-
-.engine-hud {
-  position: absolute;
-  top: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  color: #889c8a;
-  pointer-events: none;
-  font: 700 9px/1.2 Inter, sans-serif;
-  letter-spacing: 0.06em;
-  z-index: 5;
-}
-
-.engine-hud strong {
-  color: #eaf5eb;
-  font-size: 12px;
-}
-
-.engine-hud-left {
-  left: 10px;
-  padding-left: 8px;
-  border-left: 2px solid var(--gcs-cyan);
-}
-
-.engine-hud-right {
-  right: 10px;
-  padding-right: 8px;
-  align-items: flex-end;
-  border-right: 2px solid var(--gcs-cyan);
-}
-
 .engine-axis {
   position: absolute;
   left: 10px;
@@ -264,19 +495,6 @@
 .engine-axis span:nth-child(1) { right: 2px; bottom: 4px; color: var(--gcs-red); }
 .engine-axis span:nth-child(2) { left: 16px; top: 2px; color: var(--gcs-green); }
 .engine-axis span:nth-child(3) { left: 2px; bottom: 2px; color: var(--gcs-cyan); }
-
-.engine-help {
-  position: absolute;
-  left: 50%;
-  bottom: 8px;
-  transform: translateX(-50%);
-  color: rgba(136, 156, 138, 0.65);
-  white-space: nowrap;
-  pointer-events: none;
-  font: 700 8px/1 Inter, sans-serif;
-  letter-spacing: 0.08em;
-  z-index: 5;
-}
 
 /* ============================================================
    Engine Component Inspector & Selected Assembly Telemetry
@@ -307,10 +525,6 @@
   font-size: 12.5px;
   text-transform: uppercase;
   font-weight: 800;
-}
-
-.component-readings {
-  display: none;
 }
 
 .engine-inspector p {
@@ -387,6 +601,14 @@
   padding: 8px 0 2px;
   border: none;
   background: transparent;
+  justify-content: space-between;
+}
+
+.engine-toolbar-group {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  flex-wrap: wrap;
 }
 
 button.engine-tool {
@@ -397,39 +619,30 @@ button.engine-tool {
   color: #889c8a;
   border: 1px solid #1f3322;
   border-radius: 4px;
-  background: #0f1811;
-  font: 700 9px/1 Inter, sans-serif;
-  letter-spacing: 0.04em;
+  background: #0f1911;
+  font: 700 9px/1 Inter, system-ui, sans-serif;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
   cursor: pointer;
-  transition: all 180ms ease;
+  transition: all 140ms ease;
 }
 
-button.engine-tool:hover,
+button.engine-tool:hover {
+  color: #eaf5eb;
+  border-color: #385d3e;
+  background: #152418;
+}
+
 button.engine-tool.active {
-  color: #8ee0a3;
-  border-color: #6ecb85;
-  background: rgba(110, 203, 133, 0.15);
+  color: #0d170f;
+  background: var(--gcs-cyan);
+  border-color: var(--gcs-cyan);
+  box-shadow: 0 0 10px rgba(94, 181, 116, 0.4);
 }
 
 .engine-tool-separator {
   width: 1px;
-  height: 18px;
-  margin: 0 2px;
-  background: #1f3322;
-}
-
-/* Side-by-Side Split Grid Container */
-.mission-twin-split-grid {
-  display: grid;
-  grid-template-columns: 1.2fr 1fr;
-  gap: 14px;
-  margin-bottom: 14px;
-  align-items: stretch;
-}
-
-@media (max-width: 1100px) {
-  .mission-twin-split-grid {
-    grid-template-columns: 1fr;
-  }
+  height: 16px;
+  background: #18281b;
+  margin: 0 3px;
 }
