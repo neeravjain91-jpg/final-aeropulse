@@ -884,8 +884,8 @@
         premultipliedAlpha: false,
         powerPreference: 'high-performance',
         preserveDrawingBuffer: false
-      });
-      if (!this.gl) throw new Error('WebGL is unavailable');
+      }) || canvas.getContext('experimental-webgl');
+      if (!this.gl) throw new Error('WebGL is unavailable on this browser/device');
 
       this.program = createProgram(this.gl);
       this.locations = {
@@ -1051,7 +1051,11 @@
       if (data.engine_run_state != null) this.telemetry.engineState = String(data.engine_run_state);
 
       if (this.isTelemetrySynced) {
-        this.simRpm = Math.max(0, this.telemetry.rpm);
+        if (this.telemetry.rpm > 0) {
+          this.simRpm = this.telemetry.rpm;
+        } else if (!this.hasUserAdjustedRpm) {
+          this.simRpm = 2400;
+        }
         const rpmSlider = document.getElementById('simRpmSlider');
         if (rpmSlider) rpmSlider.value = this.simRpm;
         const rpmVal = document.getElementById('simRpmVal');
