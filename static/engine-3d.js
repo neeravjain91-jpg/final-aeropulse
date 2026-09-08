@@ -922,24 +922,24 @@
       };
 
       this.telemetry = {
-        rpm: 3000,
-        throttle: 58,
-        cht: 220,
-        egt: 1200,
-        oilPressure: 60,
-        oilTemp: 85,
-        fuelFlow: 20,
-        vibration: 1.02,
-        busVoltage: 28.2,
+        rpm: 0,
+        throttle: 0,
+        cht: 75,
+        egt: 80,
+        oilPressure: 0,
+        oilTemp: 25,
+        fuelFlow: 0,
+        vibration: 0,
+        busVoltage: 24.0,
         health: 100,
         fault: 'none',
-        engineState: 'TAKEOFF_CLIMB'
+        engineState: 'ENGINE_OFF'
       };
 
       // Authoritative 4-Stroke Crank Angle (0 to 4*PI radians = 0 to 720 degrees)
       this.crankAngle = 0;
       this.turboAngle = 0;
-      this.simRpm = 3000;
+      this.simRpm = 0;
       this.playbackSpeed = 1.0;
       this.isPaused = false;
       this.isTelemetrySynced = true;
@@ -1051,11 +1051,10 @@
       if (data.engine_run_state != null) this.telemetry.engineState = String(data.engine_run_state);
 
       if (this.isTelemetrySynced) {
-        if (this.telemetry.rpm > 0) {
-          this.simRpm = this.telemetry.rpm;
-        } else if (!this.hasUserAdjustedRpm) {
-          this.simRpm = 2400;
-        }
+        // Strict flight telemetry synchronization:
+        // 0 RPM on ground / standby / engine off -> stationary pistons at rest
+        // Active flight RPM when airborne / mission streaming -> real-time reciprocating kinematics
+        this.simRpm = Math.max(0, Number(this.telemetry.rpm) || 0);
         const rpmSlider = document.getElementById('simRpmSlider');
         if (rpmSlider) rpmSlider.value = this.simRpm;
         const rpmVal = document.getElementById('simRpmVal');
@@ -1097,8 +1096,9 @@
 
     updateHud() {
       const degCrank = Math.round((this.crankAngle * RAD) % 720);
+      const isStopped = Math.round(this.simRpm) <= 0;
       const values = {
-        engineHudRpm: `${Math.round(this.simRpm).toLocaleString()} RPM`,
+        engineHudRpm: isStopped ? '0 RPM (ENGINE OFF)' : `${Math.round(this.simRpm).toLocaleString()} RPM`,
         engineHudCht: `${Math.round(this.telemetry.cht)}°F CHT`,
         engineHudEgt: `${Math.round(this.telemetry.egt)}°F EGT`,
         engineHudOil: `${this.telemetry.oilPressure.toFixed(0)} PSI OIL`,
@@ -1112,8 +1112,16 @@
       const state = document.getElementById('engineTwinState');
       if (state) {
         const fault = this.telemetry.fault.toLowerCase();
-        state.textContent = fault && fault !== 'none' ? `FAULT FOCUS • ${this.telemetry.fault.toUpperCase()}` : 'DIGITAL TWIN SYNCHRONIZED';
-        state.className = fault && fault !== 'none' ? 'engine-twin-state warn' : 'engine-twin-state';
+        if (fault && fault !== 'none') {
+          state.textContent = `FAULT FOCUS • ${this.telemetry.fault.toUpperCase()}`;
+          state.className = 'engine-twin-state warn';
+        } else if (isStopped) {
+          state.textContent = 'STANDBY • ON GROUND (ENGINE OFF)';
+          state.className = 'engine-twin-state';
+        } else {
+          state.textContent = `AIRBORNE • ${this.telemetry.engineState || 'RUNNING'}`;
+          state.className = 'engine-twin-state good';
+        }
       }
     }
 
@@ -1121,16 +1129,20 @@
       const t = this.telemetry;
       const fault = t.fault.toLowerCase();
       const deg = Math.round((this.crankAngle * RAD) % 720);
+      const isStopped = Math.round(this.simRpm) <= 0;
+      const rpmDisplay = isStopped ? '0 RPM (REST)' : `${Math.round(this.simRpm)} RPM`;
+      const camRpmDisplay = isStopped ? '0 RPM (REST)' : `${Math.round(this.simRpm * 0.5)} RPM Cam`;
+      const propRpmDisplay = isStopped ? '0 RPM (REST)' : `${Math.round(this.simRpm * 0.46)} RPM Prop`;
       const entries = {
-        pistons: ['Piston & Connecting Rod Assembly', `${Math.round(this.simRpm)} RPM`, `${deg}° Slider-Crank`, 'Machined aluminum pistons, 3 compression & scraper rings, forged H-beam rods'],
-        crankcase: ['Crankcase Bedplate & Block', `${Math.round(this.simRpm)} RPM`, `${t.vibration.toFixed(2)} g RMS`, 'Inline-4 structural crankcase with cross-bolted main bearing saddles'],
+        pistons: ['Piston & Connecting Rod Assembly', rpmDisplay, `${deg}° Slider-Crank`, 'Machined aluminum pistons, 3 compression & scraper rings, forged H-beam rods'],
+        crankcase: ['Crankcase Bedplate & Block', rpmDisplay, `${t.vibration.toFixed(2)} g RMS`, 'Inline-4 structural crankcase with cross-bolted main bearing saddles'],
         cylinders: ['Crystal Cutaway Cylinders', `${Math.round(t.cht)}°F CHT`, `${Math.round(t.egt)}°F EGT`, 'Mirror-honed cylinder sleeves, water jacket channels, combustion chambers'],
-        crankshaft: ['Forged Crankshaft & Counterweights', `${Math.round(this.simRpm)} RPM`, '180° Flat-Plane', 'Flat-plane forged steel crankshaft with 8 balance counterweights and toothed flywheel'],
-        valvetrain: ['DOHC Valvetrain & Compressing Springs', `${Math.round(this.simRpm * 0.5)} RPM Cam`, '1:2 Speed Ratio', 'Dual overhead camshafts, 8 poppet valves, and dynamic compressing helical coil springs'],
-        turbo: ['Turbocharger & Boost Turbine', `${Math.max(0.6, 0.55 + t.throttle / 100).toFixed(2)} bar Boost`, `${Math.round(t.egt)}°F Turbine`, 'High-speed compressor wheel, exhaust turbine volute, wastegate actuator'],
-        fuel: ['Common-Rail Direct Fuel Injection', `${t.fuelFlow.toFixed(1)} L/h`, 'High-Pressure Rail', 'High-pressure common-rail manifold with 4 solenoid direct injectors'],
+        crankshaft: ['Forged Crankshaft & Counterweights', rpmDisplay, '180° Flat-Plane', 'Flat-plane forged steel crankshaft with 8 balance counterweights and toothed flywheel'],
+        valvetrain: ['DOHC Valvetrain & Compressing Springs', camRpmDisplay, '1:2 Speed Ratio', 'Dual overhead camshafts, 8 poppet valves, and dynamic compressing helical coil springs'],
+        turbo: ['Turbocharger & Boost Turbine', `${Math.max(0.0, isStopped ? 0 : 0.55 + t.throttle / 100).toFixed(2)} bar Boost`, `${Math.round(t.egt)}°F Turbine`, 'High-speed compressor wheel, exhaust turbine volute, wastegate actuator'],
+        fuel: ['Common-Rail Direct Fuel Injection', `${t.fuelFlow.toFixed(1)} L/h`, isStopped ? 'Depressurized' : 'High-Pressure Rail', 'High-pressure common-rail manifold with 4 solenoid direct injectors'],
         lubrication: ['Lubrication System & Oil Sump', `${t.oilPressure.toFixed(1)} PSI`, `${t.oilTemp.toFixed(1)}°C`, 'Ribbed cast aluminum sump pan, spin-on filter, pressurized galleries with dynamic flow'],
-        propeller: ['Reduction Drive & Flywheel', `${Math.round(this.simRpm * 0.46)} RPM Prop`, 'Spur Flywheel', 'Precision toothed spur flywheel and propeller reduction drive flange'],
+        propeller: ['Reduction Drive & Flywheel', propRpmDisplay, 'Spur Flywheel', 'Precision toothed spur flywheel and propeller reduction drive flange'],
         electrical: ['Alternator & FADEC Dual ECU', `${t.busVoltage.toFixed(1)} V Bus`, `${Math.round(t.health)}% Health`, '28V brushless alternator and dual-channel FADEC engine control computer'],
         sensors: ['Virtual Sensor Suite', `${Math.round(t.health)}% Trust`, fault.includes('sensor') ? 'DRIFT DETECTED' : 'NOMINAL', 'Redundant sensor probes (CHT, EGT, MAP, Oil P/T, Crank Position)']
       };
@@ -1516,9 +1528,9 @@
         const misfire = fault.includes('misfire') && idx === 1;
         const hotCyl = (fault.includes('overheat') || fault.includes('thermal')) && (idx === 1 || idx === 2);
 
-        const isCombustionStroke = cycle >= 0 && cycle < Math.PI;
-        const powerProgress = isCombustionStroke ? Math.sin((cycle / Math.PI) * Math.PI) : 0;
-        const strokeHeatBoost = isCombustionStroke && this.simRpm > 200 ? powerProgress * 45 : 0;
+        const isCombustionStroke = cycle >= Math.PI * 2 && cycle < Math.PI * 3;
+        const powerProgress = (isCombustionStroke && this.simRpm > 100) ? Math.sin(cycle - Math.PI * 2) : 0;
+        const strokeHeatBoost = powerProgress * 45;
         const cylCht = t.cht + (hotCyl ? 48 : (idx === 1 ? 8 : -4));
         const pistonCrownTemp = cylCht + 0.28 * Math.max(0, t.egt - cylCht) * (t.throttle / 100) + strokeHeatBoost;
         const crownHeatColor = thermalColor(pistonCrownTemp, 180, 315);
@@ -1590,7 +1602,7 @@
         }
 
         // Combustion Flash
-        if (isCombustionStroke && this.simRpm > 200) {
+        if (isCombustionStroke && this.simRpm > 100 && powerProgress > 0.05) {
           const flashColor = misfire ? hexColor('#4a3c20') : hexColor('#ff9922');
           add('sphere', 'cylinders', `Combustion Flash ${idx + 1}`, [cx, 1.82, 0], [0, 0, 0], [0.72 * powerProgress, 0.32 * powerProgress, 0.72 * powerProgress], flashColor, {
             alpha: 0.30 + powerProgress * 0.60,
@@ -1689,10 +1701,12 @@
       add('cylinder', 'lubrication', 'Spin-On Oil Filter', [-1.8, sumpY + 0.25, 0.95], [Math.PI * 0.35, 0, 0], [0.38, 0.38, 0.65], oilColor, { metallic: 0.85, glow: 0.2, pick: true });
       add('cylinder', 'lubrication', 'Main Oil Gallery Line', [0, -0.32, 0.75], [0, 0, Math.PI / 2], [0.08, 0.08, 4.4], oilColor, { metallic: 0.8, glow: 0.3 });
 
-      const flowSpeed = Math.max(0.15, t.oilPressure / 50);
-      for (let p = 0; p < 8; p += 1) {
-        const px = (((time * 0.0008 * flowSpeed + p / 8) % 1) * 4.4) - 2.2;
-        add('sphere', 'lubrication', 'Oil Flow Tracer', [px, -0.32, 0.75], [0, 0, 0], [0.09, 0.09, 0.09], oilColor, { glow: 0.85 });
+      if (this.simRpm > 0 || t.oilPressure > 5) {
+        const flowSpeed = Math.max(0.15, t.oilPressure / 50);
+        for (let p = 0; p < 8; p += 1) {
+          const px = (((time * 0.0008 * flowSpeed + p / 8) % 1) * 4.4) - 2.2;
+          add('sphere', 'lubrication', 'Oil Flow Tracer', [px, -0.32, 0.75], [0, 0, 0], [0.09, 0.09, 0.09], oilColor, { glow: 0.85 });
+        }
       }
 
       // 9. Propeller Reduction Gearbox
@@ -2138,9 +2152,10 @@
       gl.uniformMatrix4fv(this.locations.view, false, view);
       gl.uniformMatrix4fv(this.locations.projection, false, projection);
 
-      const vibration = this.mode === 'vibration' ? clamp((this.telemetry.vibration - 0.7) * 0.016, 0, 0.08) : 0;
+      const isRunning = this.simRpm > 0;
+      const vibration = (isRunning && this.mode === 'vibration') ? clamp((this.telemetry.vibration - 0.7) * 0.016, 0, 0.08) : 0;
       const fault = this.telemetry.fault.toLowerCase();
-      const faultShake = fault.includes('misfire') || fault.includes('knock') ? 0.04 : 0;
+      const faultShake = (isRunning && (fault.includes('misfire') || fault.includes('knock'))) ? 0.04 : 0;
       const shift = [
         Math.sin(time * 0.055) * (vibration + faultShake),
         Math.cos(time * 0.045) * vibration,
