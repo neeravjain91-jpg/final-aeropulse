@@ -146,6 +146,25 @@ For cylinder $i$ with cycle phase $\psi_i \in [0, 4\pi)$:
 
 ---
 
+## 5.1 Piston Thermal Projection & Volumetric Heat Flux Field
+
+AeroPulse-X features an advanced **Multi-Tier Piston Thermal Projection System** that maps thermodynamic heat flux directly onto and above each reciprocating piston:
+
+1. **Piston Crown High-Temperature Core Disk:**
+   - Evaluates localized surface temperature: {crown}(t) = \text{CHT} + 0.28 \cdot (\text{EGT} - \text{CHT}) \cdot (\text{Throttle}/100) + \Delta T_{combustion}(t)$.
+   - In Thermal Mode (or under high load/overheating), the piston crown radiates with an incandescent thermodynamic core disk (.80\text{ units}$ diameter) displaying peak combustion heat.
+2. **Volumetric 3D Thermal Heat Flux Projection Dome (Isothermal Gas Envelope):**
+   - Renders a semi-transparent, luminous isothermal projection envelope hovering directly above each piston crown ($[cx, Y_{piston} + 0.54, 0]$) that moves synchronously with the piston stroke.
+   - Dynamically pulses with high glow (.75\text{--}1.20$) and expanding alpha (.14\text{--}0.65$) during the 4-stroke combustion expansion cycle.
+3. **3-Tier Thermal Ring Land Conduction Gradient:**
+   - **Top Compression Ring Land:** Receives the primary heat flux, rendered in high thermal amber-red ({crown} \times 0.88$).
+   - **Intermediate Scraper Ring Land:** Medium conduction zone ({crown} \times 0.76$).
+   - **Lower Oil Control Ring Land:** Cool oil-wetted transition zone ({crown} \times 0.64$).
+4. **Radial Heat Flux Boundary Dissipation Rings:**
+   - Toroidal thermal boundary streamlines visualizing radial heat dissipation through the oil film into the liquid-cooled cylinder liner and water jacket.
+
+---
+
 ## 6. Interactive Visual Modes
 
 1. **NORMAL MODE:** Opaque, high-contrast engineering visualization. Machined aluminum casing, polished steel crankshaft, forged connecting rods, and bronze valve guides.

@@ -1221,7 +1221,7 @@
       });
 
       // -----------------------------------------------------------------------
-      // 3. Pistons, Wrist Pins & Connecting Rods (Exact 4-Stroke Slider-Crank)
+      // 3. Pistons, Wrist Pins & Connecting Rods (Exact 4-Stroke Slider-Crank with Piston Thermal Projection)
       // -----------------------------------------------------------------------
       cylXs.forEach((cx, idx) => {
         const cycle = cycleAngles[idx];
@@ -1235,26 +1235,74 @@
 
         const misfire = fault.includes('misfire') && idx === 1;
         const hotCyl = (fault.includes('overheat') || fault.includes('thermal')) && (idx === 1 || idx === 2);
-        const pColor = hotCyl ? red : thermal ? cylinderThermal : brightAlum;
 
-        // Piston Crown & Skirt (moves vertically in cylinder bore)
-        add('piston', 'pistons', `Piston ${idx + 1}`, [cx, pistonY + 0.15, 0], [0, 0, 0], [1.0, 1.0, 1.0], pColor, { metallic: 0.85, roughness: 0.25, glow: misfire ? 0.6 : hotCyl ? 0.8 : 0, pick: true });
+        // Piston Localized Temperature Calculations
+        const isCombustionStroke = cycle >= 0 && cycle < Math.PI;
+        const powerProgress = isCombustionStroke ? Math.sin((cycle / Math.PI) * Math.PI) : 0;
+        const strokeHeatBoost = isCombustionStroke && t.rpm > 200 ? powerProgress * 45 : 0;
+        const cylCht = t.cht + (hotCyl ? 48 : (idx === 1 ? 8 : -4));
+        const pistonCrownTemp = cylCht + 0.28 * Math.max(0, t.egt - cylCht) * (t.throttle / 100) + strokeHeatBoost;
+        const crownHeatColor = thermalColor(pistonCrownTemp, 180, 315);
+        const ring1Color = thermalColor(pistonCrownTemp * 0.88, 180, 315);
+        const ring2Color = thermalColor(pistonCrownTemp * 0.76, 180, 315);
+        const ring3Color = thermalColor(pistonCrownTemp * 0.64, 180, 315);
+
+        const pColor = hotCyl ? red : thermal ? ring2Color : brightAlum;
+
+        // Piston Body (Skirt & Wrist Pin Hub)
+        add('piston', 'pistons', Piston , [cx, pistonY + 0.15, 0], [0, 0, 0], [1.0, 1.0, 1.0], pColor, { metallic: 0.85, roughness: 0.25, glow: misfire ? 0.6 : hotCyl ? 0.8 : (thermal ? 0.25 : 0), pick: true });
 
         // Steel Wrist Pin (Gudgeon Pin)
-        add('cylinder', 'pistons', `Wrist Pin ${idx + 1}`, [cx, pistonY, 0], [0, 0, Math.PI / 2], [0.14, 0.14, 0.52], polishedSteel, { metallic: 0.95 });
+        add('cylinder', 'pistons', Wrist Pin , [cx, pistonY, 0], [0, 0, Math.PI / 2], [0.14, 0.14, 0.52], polishedSteel, { metallic: 0.95 });
 
         // Forged H-Beam Connecting Rod (pivots between crankpin and wrist pin)
         const rodMidY = (pinY + pistonY) * 0.5;
         const rodMidZ = pinZ * 0.5;
-        add('connectingRod', 'pistons', `Connecting Rod ${idx + 1}`, [cx, rodMidY, rodMidZ], [-rodAngle, 0, 0], [1.0, 1.0, 1.0], forgedSteel, { metallic: 0.75, roughness: 0.3 });
+        const rodColor = thermal ? thermalColor(pistonCrownTemp * 0.55, 180, 315) : forgedSteel;
+        add('connectingRod', 'pistons', Connecting Rod , [cx, rodMidY, rodMidZ], [-rodAngle, 0, 0], [1.0, 1.0, 1.0], rodColor, { metallic: 0.75, roughness: 0.3 });
+
+        // =====================================================================
+        // PISTON THERMAL PROJECTION & HEAT FLUX FIELD
+        // =====================================================================
+        // A. Piston Crown High-Temperature Core Disk
+        const crownGlow = thermal ? (0.75 + powerProgress * 0.45) : (hotCyl ? 0.85 : 0.0);
+        add('cylinder', 'pistons', Piston Crown Thermal Core , [cx, pistonY + 0.41, 0], [0, 0, 0], [0.80, 0.80, 0.04], crownHeatColor, {
+          alpha: thermal || hotCyl ? 1.0 : (t.cht > 240 ? 0.65 : 0.0),
+          glow: crownGlow,
+          metallic: 0.9,
+          roughness: 0.1,
+          pick: true
+        });
+
+        // B. Volumetric 3D Thermal Heat Flux Projection Dome (Isothermal Envelope above Piston)
+        if (thermal || hotCyl || (t.cht > 230 && isCombustionStroke)) {
+          const domeAlpha = 0.14 + thermalIntensity * 0.24 + powerProgress * 0.25;
+          const domeGlow = 0.75 + thermalIntensity * 0.35 + powerProgress * 0.45;
+          add('sphere', 'pistons', Piston Thermal Projection Dome , [cx, pistonY + 0.54, 0], [0, 0, 0], [0.86, 0.42, 0.86], crownHeatColor, {
+            alpha: clamp(domeAlpha, 0.08, 0.65),
+            glow: clamp(domeGlow, 0.5, 1.2)
+          });
+
+          // C. Radial Isothermal Dissipation Rings (Heat Flux Transfer to Liner Wall)
+          add('torus', 'pistons', Thermal Heat Flux Boundary , [cx, pistonY + 0.41, 0], [Math.PI / 2, 0, 0], [0.94, 0.94, 0.05], crownHeatColor, {
+            alpha: 0.28 + thermalIntensity * 0.35,
+            glow: 0.85 + powerProgress * 0.35
+          });
+        }
+
+        // D. 3-Tier Thermal Ring Land Conduction Gradient (in Thermal Mode)
+        if (thermal) {
+          add('torus', 'pistons', Top Compression Ring Heat Land , [cx, pistonY + 0.32, 0], [Math.PI / 2, 0, 0], [0.84, 0.84, 0.05], ring1Color, { glow: 0.45 });
+          add('torus', 'pistons', Scraper Ring Heat Land , [cx, pistonY + 0.24, 0], [Math.PI / 2, 0, 0], [0.84, 0.84, 0.05], ring2Color, { glow: 0.30 });
+          add('torus', 'pistons', Oil Ring Heat Land , [cx, pistonY + 0.16, 0], [Math.PI / 2, 0, 0], [0.84, 0.84, 0.05], ring3Color, { glow: 0.18 });
+        }
 
         // Combustion Flash inside combustion chamber during Power Stroke (0 <= cycle < PI)
-        if (cycle >= 0 && cycle < Math.PI && t.rpm > 200) {
-          const powerProgress = Math.sin((cycle / Math.PI) * Math.PI);
-          const flashColor = misfire ? hexColor('#4a3c20') : hexColor('#ffaa33');
-          add('sphere', 'cylinders', `Combustion Chamber Flash ${idx + 1}`, [cx, 1.82, 0], [0, 0, 0], [0.65 * powerProgress, 0.28 * powerProgress, 0.65 * powerProgress], flashColor, {
-            alpha: 0.25 + powerProgress * 0.55,
-            glow: 0.85 + powerProgress * 0.55
+        if (isCombustionStroke && t.rpm > 200) {
+          const flashColor = misfire ? hexColor('#4a3c20') : hexColor('#ff9922');
+          add('sphere', 'cylinders', Combustion Flame Flash , [cx, 1.82, 0], [0, 0, 0], [0.72 * powerProgress, 0.32 * powerProgress, 0.72 * powerProgress], flashColor, {
+            alpha: 0.30 + powerProgress * 0.60,
+            glow: 0.95 + powerProgress * 0.55
           });
         }
       });
