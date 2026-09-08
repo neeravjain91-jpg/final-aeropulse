@@ -1,19 +1,20 @@
 /*
- * AeroPulse-X WebGL 3D Piston Engine Digital Twin (Military GCS Theme - High Detail Cutaway)
- * -----------------------------------------------------------------------------------------
+ * AeroPulse-X WebGL 3D Piston Engine Digital Twin (Military GCS Theme - Transparent Engineering Cutaway)
+ * -----------------------------------------------------------------------------------------------------
  * High-definition, hardware-accelerated WebGL engineering renderer for the
  * Inline 4-Cylinder, 4-Stroke Turbocharged Liquid-Cooled Aero-Piston Engine.
  *
  * Implements:
  * 1. Precision 4-stroke slider-crank kinematics (crankshaft, H-beam connecting rods, pistons)
  * 2. Dual Overhead Camshafts (DOHC) & 4-stroke poppet valve timing with compressing coil springs
- * 3. Cutaway cylinder block & crankcase revealing polished cylinder liners & moving rotating assembly
- * 4. Turbocharger with high-speed spinning compressor/turbine wheels & wastegate actuator
- * 5. Common-rail direct fuel injection system & 4-into-1 tuned exhaust header
- * 6. Ribbed oil sump, oil pump, spin-on filter, and dynamic lubrication flow galleries
- * 7. Multi-mode rendering: Normal, Thermal Heatmap, Vibration Displacement, X-Ray, Exploded View
- * 8. Real-time telemetry synchronization (RPM, CHT, EGT, Oil P/T, Fuel Flow, Vibration, Faults)
- * 9. Sharp multi-light Blinn-Phong specular shader with zero haze and crisp edge definition
+ * 3. Transparent background integration with zero panel box/frame artifact
+ * 4. Cutaway cylinder block revealing mirror-honed cylinder liners & moving rotating assembly
+ * 5. Turbocharger with high-speed spinning compressor/turbine wheels & wastegate actuator
+ * 6. Common-rail direct fuel injection system & 4-into-1 tuned exhaust header
+ * 7. Ribbed oil sump, oil pump, spin-on filter, and dynamic lubrication flow galleries
+ * 8. Multi-mode rendering: Normal, Thermal Heatmap, Vibration Displacement, X-Ray, Exploded View
+ * 9. Real-time telemetry synchronization (RPM, CHT, EGT, Oil P/T, Fuel Flow, Vibration, Faults)
+ * 10. Sharp multi-light Blinn-Phong specular shader with zero haze and crisp edge definition
  */
 (function () {
   'use strict';
@@ -819,6 +820,7 @@
       this.gl = canvas.getContext('webgl', {
         antialias: true,
         alpha: true,
+        premultipliedAlpha: false,
         powerPreference: 'high-performance',
         preserveDrawingBuffer: false
       });
@@ -911,11 +913,11 @@
       gl.cullFace(gl.BACK);
       gl.enable(gl.BLEND);
       gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-      gl.clearColor(0.024, 0.042, 0.028, 1);
+      gl.clearColor(0.0, 0.0, 0.0, 0.0); // 100% Transparent background
     }
 
     resize() {
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
       const rect = this.canvas.getBoundingClientRect();
       const width = Math.max(320, Math.round(rect.width * dpr));
       const height = Math.max(260, Math.round(rect.height * dpr));
@@ -1126,7 +1128,7 @@
       const thermal = this.mode === 'thermal';
       const explosion = this.explodeAmount;
 
-      // Engineering Materials Palette
+      // Realistic Mechanical Materials Palette
       const darkBlock = hexColor('#1e2820');        // Cast iron / structural block
       const castAlum = hexColor('#566458');         // Cast aluminum head / sump
       const polishedSteel = hexColor('#cdd6cf');    // Polished steel crankshaft / wrist pins
@@ -1540,14 +1542,6 @@
       });
     }
 
-    drawGrid() {
-      const gridColor = hexColor('#152417');
-      for (let i = -7; i <= 7; i += 1) {
-        this.drawPart(this.part('cube', 'grid', 'Grid', [i * 0.85, -2.4, 0], [0, 0, 0], [0.015, 0.015, 12], gridColor, { alpha: 0.32 }));
-        this.drawPart(this.part('cube', 'grid', 'Grid', [0, -2.4, i * 0.85], [0, 0, 0], [12, 0.015, 0.015], gridColor, { alpha: 0.32 }));
-      }
-    }
-
     frame(time) {
       const delta = Math.min(0.05, (time - this.lastTime) / 1000);
       this.lastTime = time;
@@ -1585,8 +1579,6 @@
       gl.useProgram(this.program);
       gl.uniformMatrix4fv(this.locations.view, false, view);
       gl.uniformMatrix4fv(this.locations.projection, false, projection);
-
-      this.drawGrid();
 
       const vibration = this.mode === 'vibration' ? clamp((this.telemetry.vibration - 0.7) * 0.016, 0, 0.08) : 0;
       const fault = this.telemetry.fault.toLowerCase();
