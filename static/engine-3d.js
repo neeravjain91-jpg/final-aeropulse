@@ -4,8 +4,8 @@
  * High-definition, hardware-accelerated WebGL mechanical simulator for an
  * Inline 4-Cylinder, 4-Stroke Turbocharged Liquid-Cooled Aero-Piston Engine.
  *
- * Architecture:
- * 1. Single Authoritative Crank Angle State theta in [0, 4*PI) (0 to 720 deg)
+ * Implements:
+ * 1. Authoritative Crank Angle State theta in [0, 4*PI) (0 to 720 deg)
  *    - 0-180 deg   : INTAKE (Intake valve open, piston descending TDC -> BDC)
  *    - 180-360 deg : COMPRESSION (Both valves closed, piston ascending BDC -> TDC)
  *    - 360-540 deg : POWER / COMBUSTION (Spark at TDC 360 deg, power stroke TDC -> BDC)
@@ -678,7 +678,7 @@
       return (mod === 1 || mod === 2) ? rTip : rRoot;
     }
 
-    // Front face
+    // Front face (+Z)
     const frontCenter = positions.length / 3;
     positions.push(0, 0, halfT);
     normals.push(0, 0, 1);
@@ -692,7 +692,7 @@
       indices.push(frontCenter, frontCenter + 1 + i, frontCenter + 2 + i);
     }
 
-    // Back face
+    // Back face (-Z)
     const backCenter = positions.length / 3;
     positions.push(0, 0, -halfT);
     normals.push(0, 0, -1);
@@ -719,7 +719,10 @@
     }
     for (let i = 0; i < numPts; i += 1) {
       const i0 = rimBase + i * 2;
-      indices.push(i0, i0 + 1, i0 + 2, i0 + 2, i0 + 1, i0 + 3);
+      const i1 = i0 + 1;
+      const i2 = i0 + 2;
+      const i3 = i0 + 3;
+      indices.push(i0, i2, i1, i1, i2, i3);
     }
 
     return { positions, normals, indices };
@@ -873,7 +876,7 @@
     constructor(canvas, labelsCanvas) {
       this.canvas = canvas;
       this.labelsCanvas = labelsCanvas;
-      this.labelsCtx = labelsCanvas ? labelsCanvas.getContext('2d') : null;
+      this.labelsCtx = labelsCanvas && labelsCanvas.getContext ? labelsCanvas.getContext('2d') : null;
 
       this.gl = canvas.getContext('webgl', {
         antialias: true,
@@ -947,7 +950,7 @@
       this.exploded = false;
       this.explodeAmount = 0;
       this.showLabels = true;
-      this.activeCylinder = 0; // 0: Cyl 1, 1: Cyl 2, 2: Cyl 3, 3: Cyl 4
+      this.activeCylinder = 0;
 
       // Camera: 3/4 Isometric Perspective
       this.camera = { yaw: -38 * DEG, pitch: 22 * DEG, distance: 10.5, target: [0, 0.35, 0] };
@@ -956,7 +959,7 @@
       this.pickTargets = [];
       this.labelNodes = [];
       this.lastTime = performance.now();
-      this.reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+      this.reducedMotion = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)').matches : false;
 
       // Dynamic 2D Diagram Canvases
       this.kinematicsCanvas = document.getElementById('diagramKinematicsCanvas');
@@ -967,9 +970,11 @@
       this.bindInteractions();
       this.bindControls();
 
-      this.resizeObserver = new ResizeObserver(() => this.resize());
-      if (canvas.parentElement) {
-        this.resizeObserver.observe(canvas.parentElement);
+      if (typeof ResizeObserver !== 'undefined') {
+        this.resizeObserver = new ResizeObserver(() => this.resize());
+        if (canvas.parentElement) {
+          this.resizeObserver.observe(canvas.parentElement);
+        }
       }
       this.resize();
       this.updateInspector();
@@ -1064,20 +1069,25 @@
       const egtLevel = clamp((t.egt - 850) / (1500 - 850), 0, 1);
       const level = Math.max(chtLevel, egtLevel * 0.94);
       const color = thermalColor(level, 0, 1).map(channel => Math.round(channel * 255));
-      const viewport = this.canvas.closest('.engine-viewport');
+      const viewport = this.canvas.closest ? this.canvas.closest('.engine-viewport') : null;
       if (viewport) {
-        viewport.classList.toggle('thermal-active', this.mode === 'thermal');
-        viewport.style.setProperty('--thermal-rgb', color.join(', '));
-        viewport.style.setProperty('--thermal-level', level.toFixed(3));
+        if (viewport.classList && viewport.classList.toggle) {
+          viewport.classList.toggle('thermal-active', this.mode === 'thermal');
+        }
+        if (viewport.style && viewport.style.setProperty) {
+          viewport.style.setProperty('--thermal-rgb', color.join(', '));
+          viewport.style.setProperty('--thermal-level', level.toFixed(3));
+        }
       }
       const value = document.getElementById('engineThermalValue');
       if (value) value.textContent = `${Math.round(t.cht)}°F CHT · ${Math.round(t.egt).toLocaleString()}°F EGT`;
       const marker = document.getElementById('engineThermalMarker');
-      if (marker) marker.style.left = `${Math.round(level * 100)}%`;
+      if (marker && marker.style) marker.style.left = `${Math.round(level * 100)}%`;
       const field = document.getElementById('engineThermalField');
       if (field) {
         const state = level >= 0.86 ? 'critical' : level >= 0.7 ? 'hot' : level >= 0.34 ? 'nominal' : 'cool';
-        field.dataset.thermalState = state;
+        if (field.dataset) field.dataset.thermalState = state;
+        else if (field.setAttribute) field.setAttribute('data-thermal-state', state);
       }
     }
 
@@ -1230,25 +1240,27 @@
         event.currentTarget.classList.toggle('active', this.showLabels);
       });
 
-      document.querySelectorAll('[data-camera-preset]').forEach(btn => {
-        btn.addEventListener('click', () => {
-          document.querySelectorAll('[data-camera-preset]').forEach(b => b.classList.remove('active'));
-          btn.classList.add('active');
-          this.setCameraPreset(btn.dataset.cameraPreset);
+      if (document.querySelectorAll) {
+        document.querySelectorAll('[data-camera-preset]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            document.querySelectorAll('[data-camera-preset]').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            this.setCameraPreset(btn.dataset.cameraPreset);
+          });
         });
-      });
 
-      document.querySelectorAll('[data-cylinder-focus]').forEach(btn => {
-        btn.addEventListener('click', () => {
-          document.querySelectorAll('[data-cylinder-focus]').forEach(b => b.classList.remove('active'));
-          btn.classList.add('active');
-          this.activeCylinder = parseInt(btn.dataset.cylinderFocus, 10) || 0;
+        document.querySelectorAll('[data-cylinder-focus]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            document.querySelectorAll('[data-cylinder-focus]').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            this.activeCylinder = parseInt(btn.dataset.cylinderFocus, 10) || 0;
+          });
         });
-      });
 
-      document.querySelectorAll('[data-engine-mode]').forEach(button => {
-        button.addEventListener('click', () => this.setMode(button.dataset.engineMode));
-      });
+        document.querySelectorAll('[data-engine-mode]').forEach(button => {
+          button.addEventListener('click', () => this.setMode(button.dataset.engineMode));
+        });
+      }
     }
 
     syncScrubber() {
@@ -1258,7 +1270,6 @@
       const degReadout = document.getElementById('simAngleReadout');
       if (degReadout) degReadout.textContent = `${deg}°`;
 
-      // Active phase for focused cylinder
       const cylOffsets = [0, Math.PI * 3, Math.PI * 1, Math.PI * 2];
       const cylAngle = (this.crankAngle + cylOffsets[this.activeCylinder]) % (Math.PI * 4);
       let phaseName = 'INTAKE';
@@ -1289,8 +1300,8 @@
         const card = document.getElementById(`firingCyl${i + 1}`);
         if (card) {
           const isPower = ca >= Math.PI * 2 && ca < Math.PI * 3;
-          card.classList.toggle('active-power', isPower);
-          const pLabel = card.querySelector('.cyl-phase-label');
+          if (card.classList && card.classList.toggle) card.classList.toggle('active-power', isPower);
+          const pLabel = card.querySelector ? card.querySelector('.cyl-phase-label') : null;
           if (pLabel) {
             if (ca < Math.PI) pLabel.textContent = 'INTAKE';
             else if (ca < Math.PI * 2) pLabel.textContent = 'COMPR';
@@ -1303,7 +1314,7 @@
 
     bindInteractions() {
       this.canvas.addEventListener('pointerdown', event => {
-        this.canvas.setPointerCapture(event.pointerId);
+        if (this.canvas.setPointerCapture) this.canvas.setPointerCapture(event.pointerId);
         this.drag = {
           button: event.button,
           x: event.clientX,
@@ -1319,13 +1330,11 @@
         const dy = event.clientY - this.drag.y;
 
         if (this.drag.button === 2 || event.shiftKey) {
-          // Pan
           const factor = 0.005 * (this.camera.distance / 10);
           this.camera.target[0] -= dx * factor * Math.cos(this.camera.yaw);
           this.camera.target[1] += dy * factor;
           this.camera.target[2] -= dx * factor * Math.sin(this.camera.yaw);
         } else {
-          // Orbit
           this.camera.yaw -= dx * 0.007;
           this.camera.pitch = clamp(this.camera.pitch - dy * 0.006, -1.15, 1.15);
         }
@@ -1791,7 +1800,6 @@
         const nx = node.x / dpr;
         const ny = node.y / dpr;
 
-        // Leader line geometry
         const side = nx > (w / dpr) * 0.5 ? 1 : -1;
         const targetX = nx + side * 45;
         const targetY = ny - 25 - (idx % 3) * 12;
@@ -1822,19 +1830,19 @@
       if (!this.kinematicsCanvas) return;
       const canvas = this.kinematicsCanvas;
       const ctx = canvas.getContext('2d');
+      if (!ctx) return;
       const w = canvas.width, h = canvas.height;
       ctx.clearRect(0, 0, w, h);
 
       const cx = w * 0.28, cy = h * 0.52;
-      const r = 26; // crank radius in px
-      const L = 68; // rod length in px
+      const r = 26;
+      const L = 68;
 
       const cylOffsets = [0, Math.PI * 3, Math.PI * 1, Math.PI * 2];
       const phi = (this.crankAngle + cylOffsets[this.activeCylinder]) % (Math.PI * 2);
       const px = cx + Math.sin(phi) * r;
       const py = cy - Math.cos(phi) * r;
 
-      // Piston horizontal slider
       const pistonDisplacement = Math.cos(phi) * r + Math.sqrt(L * L - Math.pow(Math.sin(phi) * r, 2));
       const pistonX = cx + L + r - pistonDisplacement * 0.75 + 15;
       const pistonY = cy;
@@ -1844,9 +1852,9 @@
       ctx.arc(cx, cy, r, 0, Math.PI * 2);
       ctx.strokeStyle = 'rgba(94, 181, 116, 0.25)';
       ctx.lineWidth = 1;
-      ctx.setLineDash([2, 2]);
+      if (ctx.setLineDash) ctx.setLineDash([2, 2]);
       ctx.stroke();
-      ctx.setLineDash([]);
+      if (ctx.setLineDash) ctx.setLineDash([]);
 
       // Crank Center
       ctx.beginPath();
@@ -1903,6 +1911,7 @@
       if (!this.valveCanvas) return;
       const canvas = this.valveCanvas;
       const ctx = canvas.getContext('2d');
+      if (!ctx) return;
       const w = canvas.width, h = canvas.height;
       ctx.clearRect(0, 0, w, h);
 
@@ -1910,7 +1919,6 @@
       const graphW = w - padL - padR;
       const graphH = h - padT - padB;
 
-      // Background grid lines for 0, 180, 360, 540, 720 deg
       const strokes = ['IN', 'CMP', 'PWR', 'EXH'];
       for (let s = 0; s < 4; s++) {
         const sx = padL + (s / 4) * graphW;
@@ -1940,10 +1948,10 @@
         else ctx.lineTo(gx, gy);
       }
       ctx.strokeStyle = 'rgba(194, 209, 197, 0.35)';
-      ctx.setLineDash([2, 2]);
+      if (ctx.setLineDash) ctx.setLineDash([2, 2]);
       ctx.lineWidth = 1;
       ctx.stroke();
-      ctx.setLineDash([]);
+      if (ctx.setLineDash) ctx.setLineDash([]);
 
       // Draw Intake Valve Lift Curve (0 to 180 deg)
       ctx.beginPath();
@@ -1987,13 +1995,11 @@
       ctx.lineTo(cursorX, padT + graphH);
       ctx.stroke();
 
-      // Tracking cursor bead
       ctx.beginPath();
       ctx.arc(cursorX, padT + graphH, 3, 0, Math.PI * 2);
       ctx.fillStyle = '#5eb574';
       ctx.fill();
 
-      // Labels
       ctx.font = '700 7px Inter, monospace';
       ctx.fillStyle = '#5eb574';
       ctx.textAlign = 'left';
@@ -2008,6 +2014,7 @@
       if (!this.pressureCanvas) return;
       const canvas = this.pressureCanvas;
       const ctx = canvas.getContext('2d');
+      if (!ctx) return;
       const w = canvas.width, h = canvas.height;
       ctx.clearRect(0, 0, w, h);
 
@@ -2015,7 +2022,6 @@
       const graphW = w - padL - padR;
       const graphH = h - padT - padB;
 
-      // Axes
       ctx.strokeStyle = 'rgba(255,255,255,0.1)';
       ctx.lineWidth = 1;
       ctx.beginPath();
@@ -2031,29 +2037,23 @@
       ctx.textAlign = 'right';
       ctx.fillText('V (cm³)', w - 2, h - 2);
 
-      // Thermodynamic 4-Stroke Otto P-V Closed Loop
-      // V_min (TDC) = 0.15, V_max (BDC) = 0.95
       function getPVPoint(theta) {
         const cycle = theta % (Math.PI * 4);
         let V = 0, P = 1.0;
         if (cycle < Math.PI) {
-          // Intake (0 -> 180): V expands 0.15 -> 0.95, P = 1.0
           const t = cycle / Math.PI;
           V = lerp(0.15, 0.95, t);
           P = 1.0;
         } else if (cycle < Math.PI * 2) {
-          // Compression (180 -> 360): V contracts 0.95 -> 0.15, P rises polytropic
           const t = (cycle - Math.PI) / Math.PI;
           V = lerp(0.95, 0.15, t);
           P = 1.0 * Math.pow(0.95 / V, 1.35);
         } else if (cycle < Math.PI * 3) {
-          // Power (360 -> 540): Combustion spike at 360 then expansion
           const t = (cycle - Math.PI * 2) / Math.PI;
           V = lerp(0.15, 0.95, t);
           const maxP = 38.0;
           P = maxP * Math.pow(0.15 / V, 1.30);
         } else {
-          // Exhaust (540 -> 720): V contracts 0.95 -> 0.15, P drops to 1.2
           const t = (cycle - Math.PI * 3) / Math.PI;
           V = lerp(0.95, 0.15, t);
           P = 1.2;
@@ -2061,7 +2061,6 @@
         return { V, P };
       }
 
-      // Draw Closed P-V Loop
       ctx.beginPath();
       for (let i = 0; i <= 100; i++) {
         const th = (i / 100) * Math.PI * 4;
@@ -2071,14 +2070,13 @@
         if (i === 0) ctx.moveTo(gx, gy);
         else ctx.lineTo(gx, gy);
       }
-      ctx.closePath();
+      if (ctx.closePath) ctx.closePath();
       ctx.fillStyle = 'rgba(232, 93, 58, 0.08)';
       ctx.fill();
       ctx.strokeStyle = '#e85d3a';
       ctx.lineWidth = 1.5;
       ctx.stroke();
 
-      // Active Operating Point Bead
       const cylOffsets = [0, Math.PI * 3, Math.PI * 1, Math.PI * 2];
       const curAngle = (this.crankAngle + cylOffsets[this.activeCylinder]) % (Math.PI * 4);
       const curPt = getPVPoint(curAngle);
@@ -2093,7 +2091,6 @@
       ctx.lineWidth = 1.5;
       ctx.stroke();
 
-      // Readout
       ctx.font = '700 8px Inter, monospace';
       ctx.fillStyle = '#eaf5eb';
       ctx.textAlign = 'right';
@@ -2107,9 +2104,7 @@
 
       if (!this.isPaused && !this.reducedMotion) {
         const rawRpm = Number(this.simRpm) || 0;
-        const state = String(this.telemetry.engineState || '').toUpperCase();
-        const isRunning = rawRpm > 0 && state !== 'ENGINE_OFF' && state !== 'OFF';
-        if (isRunning) {
+        if (rawRpm > 0) {
           const revsPerSec = clamp(rawRpm / 60, 0, 110);
           this.crankAngle = (this.crankAngle + delta * revsPerSec * Math.PI * 2 * this.playbackSpeed) % (Math.PI * 4);
           this.turboAngle = (this.turboAngle + delta * revsPerSec * Math.PI * 2 * 1.8 * this.playbackSpeed) % (Math.PI * 2);
@@ -2179,9 +2174,9 @@
   }
 
   function showFallback(error) {
-    const shell = document.querySelector('.engine-viewport');
+    const shell = document.querySelector ? document.querySelector('.engine-viewport') : document.getElementById('engineCanvas');
     if (!shell) return;
-    shell.innerHTML = `<div class="engine-fallback"><strong>3D engine fallback active</strong><span>${error.message}</span></div>`;
+    shell.innerHTML = `<div class="engine-fallback" style="color:#e85d3a; padding:20px; text-align:center;"><strong>3D Engine Fallback Active</strong><br>${error.message}</div>`;
   }
 
   function init() {
@@ -2195,6 +2190,7 @@
         setMode: mode => simulator.setMode(mode),
         resetCamera: () => simulator.resetCamera(),
         setCameraPreset: p => simulator.setCameraPreset(p),
+        resize: () => simulator.resize(),
         simulator
       };
       simulator.updateHud();
