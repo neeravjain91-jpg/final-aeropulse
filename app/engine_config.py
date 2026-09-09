@@ -82,9 +82,94 @@ class EngineConfig:
         return cls()
 
     @classmethod
+    def rotax_914(cls) -> EngineConfig:
+        return cls(
+            name="Rotax-914-Turbo-115HP",
+            displacement_l=1.211,
+            bore_mm=79.5,
+            stroke_mm=61.0,
+            num_cylinders=4,
+            compression_ratio=9.0,
+            base_power_kw=84.5,
+            nominal_rpm=5500.0,
+            max_rpm=5800.0,
+            idle_rpm=1400.0,
+            turbo_critical_alt_ft=16000.0,
+        )
+
+    @classmethod
+    def inline4_diesel(cls) -> EngineConfig:
+        return cls(
+            name="Generic-Inline4-AeroDiesel",
+            displacement_l=1.991,
+            bore_mm=83.0,
+            stroke_mm=92.0,
+            num_cylinders=4,
+            compression_ratio=18.0,
+            base_power_kw=114.0,
+            nominal_rpm=2800.0,
+            max_rpm=3880.0,
+            idle_rpm=900.0,
+            turbo_critical_alt_ft=18000.0,
+        )
+
+    @classmethod
     def custom(cls, **kwargs) -> EngineConfig:
         return cls(**kwargs)
 
 
+ENGINE_PROFILES: Dict[str, Dict[str, Any]] = {
+    "AeroPiston-4C-1.35L": {
+        "id": "AeroPiston-4C-1.35L",
+        "name": "AeroPiston 4C 1.35L (Opposed-4)",
+        "layout": "opposed",
+        "cylinders": 4,
+        "displacement_l": 1.352,
+        "bore_mm": 84.0,
+        "stroke_mm": 61.0,
+        "nominal_rpm": 3000.0,
+        "max_rpm": 5800.0,
+        "idle_rpm": 1400.0,
+        "compression_ratio": 9.0,
+        "valvetrain": "ohv_pushrod",
+        "firing_order": [1, 3, 2, 4],
+        "provenance": "Published generic aero-piston digital twin specifications (Rotax/Continental proxy)"
+    },
+    "Rotax-914-Turbo-115HP": {
+        "id": "Rotax-914-Turbo-115HP",
+        "name": "Rotax 914 Turbo 115HP (Opposed-4)",
+        "layout": "opposed",
+        "cylinders": 4,
+        "displacement_l": 1.211,
+        "bore_mm": 79.5,
+        "stroke_mm": 61.0,
+        "nominal_rpm": 5500.0,
+        "max_rpm": 5800.0,
+        "idle_rpm": 1400.0,
+        "compression_ratio": 9.0,
+        "valvetrain": "ohv_pushrod",
+        "firing_order": [1, 3, 2, 4],
+        "provenance": "Rotax 914 F/UL Operator Manual / EASA TCDS E.121"
+    },
+    "Generic-Inline4-AeroDiesel": {
+        "id": "Generic-Inline4-AeroDiesel",
+        "name": "Generic Inline-4 2.0L (Aero-Diesel)",
+        "layout": "inline",
+        "cylinders": 4,
+        "displacement_l": 1.991,
+        "bore_mm": 83.0,
+        "stroke_mm": 92.0,
+        "nominal_rpm": 2800.0,
+        "max_rpm": 3880.0,
+        "idle_rpm": 900.0,
+        "compression_ratio": 18.0,
+        "valvetrain": "dohc",
+        "firing_order": [1, 3, 4, 2],
+        "provenance": "Literature-informed generic inline-4 aero-diesel reduced-order proxy (NOT manufacturer CAD)"
+    }
+}
+
+
 def default_engine_config() -> EngineConfig:
     return EngineConfig.default_135l()
+

@@ -21,6 +21,7 @@ from .config import (
     STATIC_DIR,
 )
 from .engine_model import ReducedOrderPistonEngine
+from .engine_config import EngineConfig, ENGINE_PROFILES, default_engine_config
 from .inference import AeroTwinAI
 from .mission_whatif import MissionScenario
 from .mission_whatif_rul import MissionWhatIfRUL
@@ -915,6 +916,54 @@ def mission_waypoints(preset: str | None = None):
     else:
         gps = _GPS
     return gps.get_flight_plan_summary()
+
+
+@app.get("/api/engine/profiles")
+def get_engine_profiles():
+    """Returns the catalog of available propulsion digital twin engine profiles and parameters."""
+    return {
+        "active_profile": _ENGINE.config.name,
+        "profiles": ENGINE_PROFILES,
+        "count": len(ENGINE_PROFILES),
+    }
+
+
+@app.get("/api/engine/config")
+def get_engine_config():
+    """Returns the active engine physical parameter configuration and provenance registry."""
+    return {
+        "config": _ENGINE.config.to_dict(),
+        "parameters": [p.to_dict() for p in _ENGINE.config.get_registry().all_parameters()],
+    }
+
+
+class EngineSelectionRequest(BaseModel):
+    engine_id: str
+
+
+@app.post("/api/engine/select")
+def select_engine_profile(request: EngineSelectionRequest):
+    """Selects and hot-swaps the active engine digital twin configuration profile."""
+    global _ENGINE
+    eng_id = request.engine_id
+    if eng_id not in ENGINE_PROFILES:
+        raise HTTPException(400, detail=f"Unknown engine profile: {eng_id}")
+
+    if eng_id == "Rotax-914-Turbo-115HP":
+        new_cfg = EngineConfig.rotax_914()
+    elif eng_id == "Generic-Inline4-AeroDiesel":
+        new_cfg = EngineConfig.inline4_diesel()
+    else:
+        new_cfg = EngineConfig.default_135l()
+
+    _ENGINE = ReducedOrderPistonEngine(config=new_cfg)
+    return {
+        "status": "success",
+        "selected_engine": new_cfg.name,
+        "profile": ENGINE_PROFILES[eng_id],
+        "config": new_cfg.to_dict(),
+    }
+
 
 
 @app.post("/api/mission-whatif-rul")
