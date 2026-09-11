@@ -6,7 +6,7 @@ ROOT_DIR = Path(__file__).resolve().parents[1]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
-# Ensure torch mock exists if torch is not installed so scipy / sklearn / tcn never fail
+# Safe Torch Mock for Vercel Serverless runtime
 if "torch" not in sys.modules:
     try:
         import torch

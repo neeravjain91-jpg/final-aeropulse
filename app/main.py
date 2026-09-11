@@ -1717,3 +1717,18 @@ async def telemetry_stream(
 
         except Exception:
             pass
+
+# Automatically mirror all /api/ endpoints to / for serverless routing flexibility
+@app.on_event("startup")
+def _mirror_api_routes():
+    for route in list(app.routes):
+        if hasattr(route, "path") and route.path.startswith("/api/"):
+            alt_path = route.path[4:]
+            existing = [r.path for r in app.routes if hasattr(r, "path")]
+            if alt_path not in existing:
+                app.add_api_route(
+                    alt_path,
+                    route.endpoint,
+                    methods=route.methods,
+                    response_model=getattr(route, "response_model", None),
+                )
