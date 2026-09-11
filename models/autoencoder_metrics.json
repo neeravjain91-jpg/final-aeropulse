@@ -1,0 +1,96 @@
+{
+  "dataset": "NASA ACES Telemetry (14 flights)",
+  "train_flights": [
+    "aces1am_2002_192",
+    "aces1am_2002_193",
+    "aces1am_2002_214",
+    "aces1am_2002_216",
+    "aces1am_2002_218",
+    "aces1am_2002_220",
+    "aces1am_2002_222",
+    "aces1am_2002_224",
+    "aces1am_2002_227",
+    "aces1am_2002_237",
+    "aces1am_2002_242"
+  ],
+  "test_flights": [
+    "aces1am_2002_191",
+    "aces1am_2002_225",
+    "aces1am_2002_235"
+  ],
+  "train_normal_windows": 61639,
+  "test_windows": 29630,
+  "tau_reconstruction_threshold": 0.6674659848213196,
+  "real_aces_benchmark": {
+    "model_d_isolation_forest": {
+      "auroc": 0.8724982958251625,
+      "auprc": 0.7101694359384321,
+      "precision": 0.6104161928587674,
+      "recall": 0.6450372506608988,
+      "f1": 0.6272493573264781,
+      "false_alarm_rate": 0.0672582355019828,
+      "tp": 2684,
+      "fp": 1713,
+      "tn": 23756,
+      "fn": 1477
+    },
+    "model_e_tcn_autoencoder": {
+      "auroc": 0.9682586307876966,
+      "auprc": 0.8676659275872415,
+      "precision": 0.408421262193908,
+      "recall": 0.9860610430185052,
+      "f1": 0.5776025902724009,
+      "false_alarm_rate": 0.23334249479759708,
+      "tp": 4103,
+      "fp": 5943,
+      "tn": 19526,
+      "fn": 58
+    },
+    "model_f_hybrid": {
+      "auroc": 0.9598023369499744,
+      "auprc": 0.8192799593914621,
+      "precision": 0.6683914510686164,
+      "recall": 0.7140110550348474,
+      "f1": 0.6904485242853823,
+      "false_alarm_rate": 0.05787427853468923,
+      "tp": 2971,
+      "fp": 1474,
+      "tn": 23995,
+      "fn": 1190
+    }
+  },
+  "synthetic_fault_injections": {
+    "overheating": {
+      "description": "Thermal coolant heat deficit",
+      "detection_delay_seconds": 10,
+      "max_reconstruction_error": 340.84320068359375
+    },
+    "lubrication": {
+      "description": "Oil viscosity breakdown & friction",
+      "detection_delay_seconds": 10,
+      "max_reconstruction_error": 388.9819030761719
+    },
+    "misfire": {
+      "description": "Cylinder combustion torque loss",
+      "detection_delay_seconds": 10,
+      "max_reconstruction_error": 349.8391418457031
+    },
+    "injector": {
+      "description": "Fuel delivery restriction & lean burn",
+      "detection_delay_seconds": 10,
+      "max_reconstruction_error": 362.05084228515625
+    },
+    "sensor_drift": {
+      "description": "Transducer sensor calibration bias",
+      "detection_delay_seconds": 10,
+      "max_reconstruction_error": 335.2040710449219
+    }
+  },
+  "edge_benchmark": {
+    "parameters": 6661,
+    "file_size_kb": 39.0966796875,
+    "cpu_latency_ms": 0.5061361999833025
+  },
+  "decision": "B. TCN AUTOENCODER BECOMES PRIMARY WITH ISOLATION FOREST FALLBACK",
+  "rationale": "TCN Autoencoder achieves outstanding AUROC (0.9683 vs 0.8725) and AUPRC (0.8677 vs 0.7102); Hybrid ensemble achieves highest F1 (69.04% vs 62.72%) and lowest false alarm rate (5.79%)."
+}

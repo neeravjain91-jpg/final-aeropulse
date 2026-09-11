@@ -1,5 +1,19 @@
 services:
   aeropulse-x:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: aeropulse-x-twin
+    restart: unless-stopped
     ports:
       - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - HOST=0.0.0.0
+      - PORT=8000
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s

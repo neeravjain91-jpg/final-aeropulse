@@ -32,8 +32,9 @@ class DiagnosticEvidence:
         }
 
 class FusionEngine:
-    def __init__(self):
-        pass
+    def __init__(self, w_hgb: float = 0.70, w_tcn: float = 0.30):
+        self.w_hgb = w_hgb
+        self.w_tcn = w_tcn
 
     def fuse(
         self,
@@ -50,11 +51,11 @@ class FusionEngine:
         trust = float(sensor_health.get("overall_trust_score", 100.0))
         suspects = sensor_health.get("suspect_sensors", [])
 
-        # Default TCN if unavailable
+        # Default TCN fallback if unavailable
         if not tcn_probs:
             tcn_probs = dict(hgb_probs)
 
-        # 1. Sensor fault isolation veto
+        # 1. Deterministic Sensor fault isolation veto (Safety Rule 1)
         if trust < 40.0 and len(suspects) <= 2 and rms_z < 2.0:
             final_diag = "Watch"
             conf = 0.85
@@ -73,7 +74,7 @@ class FusionEngine:
                 reason_codes=reasons,
             )
 
-        # 2. Unknown Anomaly veto
+        # 2. Unknown Multi-Sensor Anomaly veto (Safety Rule 2)
         if is_unknown_anomaly and max_z > 2.5:
             final_diag = "Critical"
             conf = 0.90
@@ -92,29 +93,39 @@ class FusionEngine:
                 reason_codes=reasons,
             )
 
-        # 3. Fused class probability weighting (0.60 HGB + 0.40 TCN)
+        # 3. Optimized Zero-Leakage Hybrid Probability Weighting (0.70 HGB + 0.30 TCN)
         classes = ["Critical", "Warning", "Watch", "Normal"]
         fused_p = {}
         for c in classes:
-            fused_p[c] = 0.60 * hgb_probs.get(c, 0.0) + 0.40 * tcn_probs.get(c, 0.0)
+            fused_p[c] = self.w_hgb * hgb_probs.get(c, 0.0) + self.w_tcn * tcn_probs.get(c, 0.0)
 
-        # Critical recall priority threshold (tau = 0.25)
+        # 4. Explainability & Reason Code Generation
+        if hgb_probs.get("Critical", 0.0) >= 0.25 and tcn_probs.get("Critical", 0.0) < 0.15 and fused_p.get("Critical", 0.0) < 0.25:
+            reasons.append("TEMPORAL_SUPPRESSION: Temporal residual sequence suppressed transient point false alarm.")
+        elif hgb_probs.get("Critical", 0.0) >= 0.25 and tcn_probs.get("Critical", 0.0) >= 0.25:
+            reasons.append("SAFETY_THRESHOLD_CRITICAL: High fault probability corroborated by temporal physics residuals.")
+        elif fused_p.get("Critical", 0.0) >= 0.25:
+            reasons.append("SAFETY_THRESHOLD_CRITICAL: Fused fault probability exceeded safety margin (tau=0.25).")
+        elif fused_p.get("Warning", 0.0) >= 0.35:
+            reasons.append("ELEVATED_DEVIATION_WARNING: Degradation trend confirmed across diagnostic models.")
+        elif fused_p.get("Watch", 0.0) >= 0.45:
+            reasons.append("MONITOR_WATCH: Minor operating variance.")
+        else:
+            reasons.append("NOMINAL: All telemetry aligned with thermodynamic digital twin expectations.")
+
+        # 5. Calibrated Hierarchical Decision Logic
         if fused_p.get("Critical", 0.0) >= 0.25:
             final_diag = "Critical"
             conf = fused_p["Critical"]
-            reasons.append("SAFETY_THRESHOLD_CRITICAL: High fault probability corroborated by temporal physics residuals.")
         elif fused_p.get("Warning", 0.0) >= 0.35:
             final_diag = "Warning"
             conf = fused_p["Warning"]
-            reasons.append("ELEVATED_DEVIATION_WARNING: Degradation trend confirmed across diagnostic models.")
         elif fused_p.get("Watch", 0.0) >= 0.45:
             final_diag = "Watch"
             conf = fused_p["Watch"]
-            reasons.append("MONITOR_WATCH: Minor operating variance.")
         else:
             final_diag = "Normal"
             conf = fused_p.get("Normal", 0.95)
-            reasons.append("NOMINAL: All telemetry aligned with thermodynamic digital twin expectations.")
 
         return DiagnosticEvidence(
             hgb_probs=hgb_probs,
