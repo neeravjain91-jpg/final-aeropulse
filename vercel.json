@@ -1,9 +1,4 @@
 {
-  "functions": {
-    "api/index.py": {
-      "includeFiles": "static/**,models/**,data_sample/**"
-    }
-  },
   "rewrites": [
     {
       "source": "/(.*)",

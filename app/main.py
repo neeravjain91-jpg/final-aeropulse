@@ -52,11 +52,13 @@ app = FastAPI(
     ),
 )
 
-app.mount(
-    "/static",
-    StaticFiles(directory=STATIC_DIR),
-    name="static",
-)
+try:
+    if STATIC_DIR.exists():
+        app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+    elif (Path(__file__).resolve().parents[1] / "static").exists():
+        app.mount("/static", StaticFiles(directory=Path(__file__).resolve().parents[1] / "static"), name="static")
+except Exception:
+    pass
 
 
 _ai = None
@@ -71,13 +73,6 @@ _ENGINE = ReducedOrderPistonEngine()
 def _load_assets() -> None:
     global _ai, _ai_error, _vibration_ai, _vibration_demo, _demo
 
-    # Auto-bootstrap model assets if missing
-    try:
-        from scripts.train_models import main as train_models_main
-        train_models_main()
-    except Exception as exc:
-        pass
-
     try:
         _ai = AeroTwinAI()
         _ai_error = None
@@ -90,13 +85,18 @@ def _load_assets() -> None:
     except Exception:
         _vibration_ai = None
 
-    _vibration_demo = load_vibration_demo()
+    try:
+        _vibration_demo = load_vibration_demo()
+    except Exception:
+        _vibration_demo = None
 
-    path = DATA_SAMPLE_DIR / "aces_demo.csv"
-
-    if path.exists():
-        _demo = pd.read_csv(path)
-    else:
+    try:
+        path = DATA_SAMPLE_DIR / "aces_demo.csv"
+        if path.exists():
+            _demo = pd.read_csv(path)
+        else:
+            _demo = None
+    except Exception:
         _demo = None
 
 
