@@ -443,11 +443,15 @@ def _apply_live_fault(
     response_class=HTMLResponse,
 )
 def home():
-    return (
-        STATIC_DIR / "index.html"
-    ).read_text(
-        encoding="utf-8"
-    )
+    index_file = STATIC_DIR / "index.html"
+    if not index_file.exists():
+        for p in [Path.cwd() / "static" / "index.html", Path(__file__).parent.parent / "static" / "index.html"]:
+            if p.exists():
+                index_file = p
+                break
+    if index_file.exists():
+        return index_file.read_text(encoding="utf-8")
+    return HTMLResponse("<h1>AeroPulse-X Digital Twin</h1><p>Application loading...</p>")
 
 
 @app.get("/api/status")
