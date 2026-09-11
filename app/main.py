@@ -43,6 +43,47 @@ from .validation import AeroPulseValidator
 _GPS = SimulatedGPSSource()
 
 
+import urllib.parse
+from starlette.types import ASGIApp, Scope, Receive, Send
+
+class VercelRouteRewriteASGIMiddleware:
+    """
+    ASGI middleware for Vercel serverless functions.
+    Extracts the original requested route from __route__ query parameter or
+    x-matched-path / x-forwarded-uri headers and sets scope['path'] before routing.
+    """
+    def __init__(self, app: ASGIApp):
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send):
+        if scope.get("type") == "http":
+            qs = scope.get("query_string", b"").decode("utf-8")
+            if "__route__" in qs:
+                params = urllib.parse.parse_qs(qs, keep_blank_values=True)
+                route_val = params.pop("__route__", [None])[0]
+                if route_val:
+                    route_val = "/" + route_val.lstrip("/")
+                    target_path = route_val if route_val.startswith("/api/") else "/api" + route_val
+                    scope["path"] = target_path
+                    scope["raw_path"] = target_path.encode("utf-8")
+                    scope["query_string"] = urllib.parse.urlencode(params, doseq=True).encode("utf-8")
+            elif scope.get("path") in ("/api/index.py", "/api/index", "/api", "/api/"):
+                headers = dict(scope.get("headers", []))
+                matched = (
+                    headers.get(b"x-matched-path", b"").decode("utf-8")
+                    or headers.get(b"x-forwarded-uri", b"").decode("utf-8")
+                    or headers.get(b"x-real-path", b"").decode("utf-8")
+                    or headers.get(b"x-vercel-matched-path", b"").decode("utf-8")
+                )
+                if matched and matched not in ("/api/index.py", "/api/index", "/api", "/api/"):
+                    clean_path = matched.split("?")[0]
+                    target_path = clean_path if clean_path.startswith("/api/") else "/api" + clean_path
+                    scope["path"] = target_path
+                    scope["raw_path"] = target_path.encode("utf-8")
+
+        await self.app(scope, receive, send)
+
+
 app = FastAPI(
     title=f"{PROJECT_NAME} / AeroTwin-MALE",
     version=PROJECT_VERSION,
@@ -51,6 +92,8 @@ app = FastAPI(
         "for UAV piston-engine health monitoring."
     ),
 )
+
+app.add_middleware(VercelRouteRewriteASGIMiddleware)
 
 try:
     if STATIC_DIR.exists():
@@ -1757,17 +1800,4 @@ def _register_dual_routes():
                     )
 
 _register_dual_routes()
-
-@app.api_route("/{full_path:path}", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"])
-async def catch_all_inspector(request: Request, full_path: str):
-    return {
-        "inspector": "catch_all",
-        "full_path": full_path,
-        "request_url": str(request.url),
-        "request_path": request.url.path,
-        "scope_path": request.scope.get("path"),
-        "scope_raw_path": str(request.scope.get("raw_path")),
-        "scope_query_string": str(request.scope.get("query_string")),
-        "request_headers": dict(request.headers),
-    }
 
