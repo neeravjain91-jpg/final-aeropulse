@@ -12,3 +12,8 @@ deploy
 venv
 .venv
 .env*
+*.pt
+*.ts
+*.zip
+*.tar*
+data_sample/cwru_demo.csv
