@@ -16,4 +16,4 @@ venv
 *.ts
 *.zip
 *.tar*
-data_sample/cwru_demo.csv
+
