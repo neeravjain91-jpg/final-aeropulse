@@ -1757,3 +1757,17 @@ def _register_dual_routes():
                     )
 
 _register_dual_routes()
+
+@app.api_route("/{full_path:path}", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"])
+async def catch_all_inspector(request: Request, full_path: str):
+    return {
+        "inspector": "catch_all",
+        "full_path": full_path,
+        "request_url": str(request.url),
+        "request_path": request.url.path,
+        "scope_path": request.scope.get("path"),
+        "scope_raw_path": str(request.scope.get("raw_path")),
+        "scope_query_string": str(request.scope.get("query_string")),
+        "request_headers": dict(request.headers),
+    }
+
