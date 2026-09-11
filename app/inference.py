@@ -9,7 +9,12 @@ try:
     import torch
     TORCH_AVAILABLE = True
 except ImportError:
-    torch = None
+    class _MockTorch:
+        Tensor = object
+        float32 = object
+        no_grad = lambda: lambda fn: fn
+        load = lambda *args, **kwargs: None
+    torch = _MockTorch()
     TORCH_AVAILABLE = False
 
 from .advisory import fault_advisory, maintenance_advice

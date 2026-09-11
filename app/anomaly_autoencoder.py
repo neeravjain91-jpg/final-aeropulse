@@ -1,3 +1,4 @@
+from __future__ import annotations
 """Temporal TCN Autoencoder for Unsupervised Anomaly Detection.
 
 This module implements a 1D Dilated Causal Convolutional Autoencoder for unsupervised
@@ -11,9 +12,17 @@ try:
     import torch.nn as nn
     TORCH_AVAILABLE = True
 except ImportError:
-    torch = None
+    class _MockTorch:
+        Tensor = object
+        float32 = object
+        no_grad = lambda: lambda fn: fn
+        load = lambda *args, **kwargs: None
+    torch = _MockTorch()
     class _MockNNModule:
         def __init__(self, *args, **kwargs): pass
+        def __call__(self, *args, **kwargs): pass
+        def eval(self): pass
+        def load_state_dict(self, *args, **kwargs): pass
     class _MockNN:
         Module = _MockNNModule
         Conv1d = object
