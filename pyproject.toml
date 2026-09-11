@@ -24,9 +24,6 @@ dev = [
     "torch>=2.0.0"
 ]
 
-[tool.vercel]
-entrypoint = "app.main:app"
-
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]

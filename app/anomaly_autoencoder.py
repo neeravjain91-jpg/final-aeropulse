@@ -6,8 +6,23 @@ anomaly detection and novel fault identification from physics-normalized residua
 
 from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
-import torch
-import torch.nn as nn
+try:
+    import torch
+    import torch.nn as nn
+    TORCH_AVAILABLE = True
+except ImportError:
+    torch = None
+    class _MockNNModule:
+        def __init__(self, *args, **kwargs): pass
+    class _MockNN:
+        Module = _MockNNModule
+        Conv1d = object
+        BatchNorm1d = object
+        ReLU = object
+        ELU = object
+        Dropout = object
+    nn = _MockNN()
+    TORCH_AVAILABLE = False
 
 from app.tcn_model import CausalConv1d, RESIDUAL_CHANNELS_13
 

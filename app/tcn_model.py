@@ -12,9 +12,25 @@ from __future__ import annotations
 import os
 from typing import Any, Dict, List, Optional, Tuple, Union
 import numpy as np
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
+try:
+    import torch
+    import torch.nn as nn
+    import torch.nn.functional as F
+    TORCH_AVAILABLE = True
+except ImportError:
+    torch = None
+    class _MockNNModule:
+        def __init__(self, *args, **kwargs): pass
+    class _MockNN:
+        Module = _MockNNModule
+        Conv1d = object
+        BatchNorm1d = object
+        ReLU = object
+        ELU = object
+        Dropout = object
+    nn = _MockNN()
+    F = None
+    TORCH_AVAILABLE = False
 
 # The 13 verified continuous channels (Battery_Current is strictly EXCLUDED)
 RESIDUAL_CHANNELS_13: List[str] = [

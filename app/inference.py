@@ -5,7 +5,12 @@ from typing import Any, Dict, List, Optional
 import joblib
 import numpy as np
 import pandas as pd
-import torch
+try:
+    import torch
+    TORCH_AVAILABLE = True
+except ImportError:
+    torch = None
+    TORCH_AVAILABLE = False
 
 from .advisory import fault_advisory, maintenance_advice
 from .anomaly_autoencoder import TemporalTCNAutoencoder
