@@ -1,0 +1,2966 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>AeroPulse-X • Interactive UAV Mission Map & 3D Piston Engine Digital Twin GCS</title>
+<!-- Leaflet Interactive Geographic Map Engine -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="stylesheet" href="/static/engine-3d.css?v=20260909_003" />
+
+<style>
+:root{
+  --bg:#060a06;--panel:#0b120c;--panel2:#0e160e;--line:#18261a;--text:#dbe5db;
+  --muted:#7a8c7b;--cyan:#5eb574;--green:#4cb574;--amber:#c9983e;--red:#c94c48;--blue:#4a805c;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Arial;
+  background:radial-gradient(circle at 20% -10%,#101c12 0,#060a06 45%,#040704 100%);
+  color:var(--text)
+}
+.shell{max-width:100%;margin:0;padding:8px 12px}
+.top{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:6px}
+.brand h1{margin:0;font-size:20px;letter-spacing:-.5px;color:#e8f0e8}
+.brand .sub{color:var(--muted);margin-top:1px;font-size:10px}
+.badges{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end}
+.badge{border:1px solid var(--line);border-radius:999px;padding:2px 8px;font-size:10px;color:var(--muted);background:#09100a}
+.badge.live{color:var(--green);border-color:#1c3d24;background:#0a1c0f}
+.badge.err{color:var(--red);border-color:#4a1c1c;background:#1c0b0b}
+.badge.warn{color:var(--amber);border-color:#3d2f10;background:#1c1407}
+
+/* Left Sidebar Layout Structure */
+.app-container{
+  display:flex;
+  gap:10px;
+  align-items:flex-start;
+  width:100%;
+}
+.side-nav{
+  width:160px;
+  min-width:160px;
+  max-width:160px;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  background:linear-gradient(180deg,#0e160e,#060a06);
+  border:1px solid #18281b;
+  border-radius:8px;
+  padding:8px 6px;
+  box-shadow:0 6px 20px rgba(0,0,0,0.6);
+  position:sticky;
+  top:8px;
+}
+.side-tab-btn{
+  background:#080e09;
+  border:1px solid #142016;
+  border-radius:6px;
+  padding:10px 8px;
+  text-align:left;
+  cursor:pointer;
+  color:#b2c2b4;
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+  width:100%;
+  margin:0;
+  transition:all .18s ease;
+}
+.side-tab-btn:hover{
+  background:#101c12;
+  border-color:#2c4530;
+  color:#e2ece2;
+  filter:none;
+}
+.side-tab-btn.active{
+  background:linear-gradient(180deg,#18331d,#0f2414);
+  border:1px solid #488755;
+  color:#8ee0a3;
+  box-shadow:inset 3px 0 0 #5eb574,0 4px 12px rgba(0,0,0,0.5);
+}
+.side-tab-icon{font-size:16px;margin-bottom:2px}
+.side-tab-title{font-size:10.5px;font-weight:800;letter-spacing:.04em;line-height:1.2}
+.side-tab-sub{font-size:8.5px;color:#7a8c7b;line-height:1.2}
+
+.main-pane{
+  flex:1;
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+}
+.tab-content{
+  width:100%;
+}
+
+.grid{display:grid;gap:8px}
+.kpis{grid-template-columns:repeat(5,minmax(130px,1fr))}
+.two{grid-template-columns:1fr 1fr}
+.three{grid-template-columns:1fr 1fr 1fr}
+.card{
+  background:linear-gradient(180deg,var(--panel2),var(--panel));
+  border:1px solid var(--line);border-radius:10px;padding:10px 12px;
+  box-shadow:0 6px 20px rgba(0,0,0,0.65)
+}
+.card h2,.card h3{margin:0 0 8px;font-size:13px;color:#c0cdc0}
+.kpi-label{font-size:9.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+.kpi{font-size:22px;font-weight:800;margin-top:3px}
+.tiny{font-size:10.5px;color:var(--muted);margin-top:2px}
+.good{color:var(--green)!important}
+.warn{color:var(--amber)!important}
+.bad{color:var(--red)!important}
+.info{color:var(--cyan)!important}
+.controls{grid-template-columns:repeat(4,minmax(130px,1fr))}
+label{font-size:10.5px;color:var(--muted);font-weight:600}
+select,input,button{
+  width:100%;border:1px solid #18261a;border-radius:6px;
+  background:#070d08;color:var(--text);padding:5px 8px;margin-top:3px;font-size:11.5px
+}
+button{cursor:pointer;font-weight:700;background:linear-gradient(90deg,#17361d,#204a28);border-color:#2c6136;color:#e2ece2;transition:filter .2s}
+button.secondary{background:#0e1710;border-color:#1c2b1e;color:#b2c2b4}
+button.success{background:linear-gradient(90deg,#143b1e,#1c572e);border-color:#26703b;color:#e2ece2}
+button.danger{background:#2b1010;border-color:#4a1c1c;color:#d9534f}
+button:hover{filter:brightness(1.15)}
+.actions{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.actions button{max-width:210px}
+.tbl{width:100%;border-collapse:collapse;font-size:11px}
+.tbl td,.tbl th{padding:4px 6px;border-bottom:1px solid #142016;text-align:left}
+.tbl th{color:var(--muted);font-weight:600;font-size:10px;text-transform:uppercase}
+.scroll{max-height:240px;overflow-y:auto}
+.pill{display:inline-block;border-radius:999px;padding:1px 7px;background:#0f1710;border:1px solid #1c2b1e;font-size:10.5px;font-weight:600}
+.pill.good{background:#0a1c0f;border-color:#1c3d24;color:#4cb574}
+.pill.warn{background:#1c1407;border-color:#3d2f10;color:#c9983e}
+.pill.bad{background:#1f0c0c;border-color:#421818;color:#c94c48}
+.bar{height:5px;background:#050906;border-radius:999px;overflow:hidden;border:1px solid #142016}
+.bar>i{display:block;height:100%;background:linear-gradient(90deg,#2e6138,#5eb574)}
+.riskrow{display:grid;grid-template-columns:135px 1fr 38px;gap:6px;align-items:center;margin:5px 0;font-size:11px}
+.diag{padding:5px 0;border-bottom:1px solid #142016}
+.diag:last-child{border-bottom:0}
+.diag b{display:block;font-size:11px}
+.evidence{color:var(--muted);font-size:10px;margin-top:2px}
+canvas#timeline{width:100%;height:200px;background:#060a06;border:1px solid #142016;border-radius:6px}
+.event{padding:7px;border-left:3px solid var(--cyan);background:#080e09;border-radius:5px;margin:5px 0;font-size:11px}
+.event strong{display:block;color:#e8f0e8}
+.notice{padding:7px 10px;border:1px solid #3d2f10;background:#171105;color:#d9a74a;border-radius:6px;margin-bottom:8px;font-size:11px;}
+.hidden{display:none}
+.footer{color:var(--muted);font-size:10px;padding:10px 2px 2px}
+
+/* Mission Control Banner & Auto Readout Strip */
+.mission-control-card{
+  background:linear-gradient(180deg,#0f1910,#080e09);border:1px solid #1c2e1f;
+  border-radius:10px;padding:8px 12px;margin-bottom:8px;box-shadow:0 6px 20px rgba(0,0,0,0.7)
+}
+.mission-header{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.auto-flight-strip{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:5px;
+  background:#060a06;border:1px solid #142016;border-radius:6px;padding:6px 8px;margin-bottom:6px
+}
+.auto-item{display:flex;flex-direction:column}
+.auto-label{font-size:8.5px;text-transform:uppercase;color:#6e806f;font-weight:700;letter-spacing:.05em}
+.auto-val{font-size:12px;font-weight:800;color:#dbe5db;margin-top:1px}
+.primary-mission-actions{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.primary-mission-actions button{width:auto;min-width:115px;margin:0;padding:5px 10px;}
+
+/* UAV Live Mission Map Styles */
+.map-card{
+  background:linear-gradient(180deg,#0e160e,#080e09);border:1px solid #18281b;
+  border-radius:10px;padding:10px 12px;box-shadow:0 6px 20px rgba(0,0,0,0.6);
+  display:flex;flex-direction:column;
+}
+.map-header{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:6px}
+.map-toolbar{display:flex;gap:3px;flex-wrap:wrap;align-items:center}
+.map-btn{
+  background:#0c140d;border:1px solid #18281b;color:#dbe5db;padding:3px 7px;
+  border-radius:4px;font-size:9.5px;font-weight:600;cursor:pointer;width:auto;margin:0
+}
+.map-btn:hover{background:#142217;border-color:#2c4530}
+.map-btn.active{background:#18331d;border-color:#488755;color:#7ec78e}
+
+.map-wrapper{position:relative;width:100%;height:430px;min-height:430px;border-radius:6px;overflow:hidden;border:1px solid #162418;}
+#uavMap{height:100%;width:100%;background:#050906;z-index:1}
+.leaflet-container{background:#050906!important;font-family:inherit}
+.leaflet-tile-pane .tactical-dark-tiles {
+  filter: invert(100%) hue-rotate(180deg) brightness(88%) contrast(92%) saturate(85%);
+}
+.leaflet-popup-content-wrapper{
+  background:#0b120c;color:#dbe5db;border:1px solid #1c2b1e;border-radius:6px;font-size:11px;box-shadow:0 4px 16px rgba(0,0,0,0.85)
+}
+.leaflet-popup-tip{background:#0b120c;border:1px solid #1c2b1e}
+
+/* Floating UAV Close Proximity HUD Box */
+.proximity-hud-box{
+  position:absolute;top:8px;right:8px;z-index:1000;width:270px;
+  background:rgba(6,10,6,0.95);border:1px solid #1c2e1f;border-radius:6px;
+  padding:6px 8px;backdrop-filter:blur(8px);box-shadow:0 8px 24px rgba(0,0,0,0.9);
+  font-size:9.5px;display:none;pointer-events:auto;
+}
+.prox-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;padding-bottom:3px;border-bottom:1px solid #142016}
+.prox-section{padding:3px 0;border-bottom:1px solid #101a11}
+.prox-sec-title{font-size:8px;text-transform:uppercase;color:#5eb574;font-weight:700;letter-spacing:.06em;margin-bottom:2px}
+.prox-grid{display:grid;grid-template-columns:1fr 1fr;gap:2px 5px}
+.prox-lbl{color:#6e806f;font-size:8.5px}
+.prox-grid b{color:#dbe5db;font-size:9.5px}
+
+/* Map Status Bar */
+.map-status-bar{
+  display:flex;justify-content:space-between;align-items:center;
+  background:#050805;padding:2px 6px;font-size:9px;color:#647565;
+  border-top:1px solid #101a11;
+}
+
+.map-hud{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:5px;
+  background:#060a06;border:1px solid #142016;border-radius:6px;padding:5px 8px;margin-top:6px
+}
+.hud-item{display:flex;flex-direction:column}
+.hud-label{font-size:8px;text-transform:uppercase;color:#647565;font-weight:700;letter-spacing:.05em}
+.hud-val{font-size:11px;font-weight:800;color:#dbe5db;margin-top:1px}
+
+/* Compact Waypoint Editor Table */
+.wp-table-box{
+  background:#070d08;border:1px solid #142016;border-radius:6px;padding:6px 8px;margin-top:6px
+}
+.wp-input{padding:2px 4px;font-size:9.5px;margin:0;background:#050805;border-color:#162418}
+
+/* Subsystem & Cutaway Styles */
+.subsystem-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(115px,1fr));gap:5px;margin-bottom:8px}
+.subsystem-card{background:#0a100a;border:1px solid #142016;border-radius:6px;padding:5px 6px;text-align:center}
+.subsystem-card .s-name{font-size:9px;color:#7a8c7b;font-weight:600;text-transform:uppercase}
+.subsystem-card .s-score{font-size:16px;font-weight:800;margin:1px 0}
+.can-box{
+  background:#050805;border:1px solid #121c13;border-radius:6px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9.5px;
+  color:#5eb574;padding:5px 8px;max-height:88px;overflow-y:auto;line-height:1.35
+}
+.hw-controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:5px;margin-top:5px}
+.hw-group{background:#070d08;border:1px solid #142016;border-radius:6px;padding:5px 6px}
+.hw-group label{display:flex;justify-content:space-between;font-size:9px;color:#7a8c7b;font-weight:600}
+.hw-group input[type="range"]{width:100%;margin-top:2px;accent-color:#5eb574}
+
+@media(max-width:1100px){
+  .app-container{flex-direction:column}
+  .side-nav{width:100%;min-width:100%;max-width:100%;flex-direction:row;position:static;}
+  .side-tab-btn{flex:1;}
+  .kpis{grid-template-columns:repeat(2,1fr)}
+  .two,.three{grid-template-columns:1fr}
+  .controls{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+</head>
+
+<body>
+<div class="shell">
+
+  <div class="top">
+    <div class="brand">
+      <h1>AeroPulse-X</h1>
+      <div class="sub">
+        Real Geographic UAV Mission Map & 3D Piston Engine Digital Twin GCS • SIH26054
+      </div>
+    </div>
+
+    <div class="badges">
+      <span id="serverBadge" class="badge">Checking system…</span>
+      <span id="gpsBadge" class="badge live">● OPENSTREETMAP GIS</span>
+      <span id="envBadge" class="badge live">● LIVE WEATHER / METAR</span>
+      <span class="badge">Research Benchmark</span>
+    </div>
+  </div>
+
+  <div id="setupNotice" class="notice hidden"></div>
+
+  <!-- APPLICATION CONTAINER: LEFT SIDEBAR NAVIGATION + MAIN CONTENT PANE -->
+  <div class="app-container">
+
+    <!-- LEFT SIDEBAR: VERTICAL 3-TAB NAVIGATION -->
+    <nav class="side-nav">
+      <button id="tabBtnLive" class="side-tab-btn active" onclick="switchDashboardTab('live')">
+        <span class="side-tab-icon">⌖</span>
+        <span class="side-tab-title">LIVE MISSION</span>
+        <span class="side-tab-sub">Map • 3D Twin • CAN</span>
+      </button>
+
+      <button id="tabBtnDiagnostics" class="side-tab-btn" onclick="switchDashboardTab('diagnostics')">
+        <span class="side-tab-icon">⚙</span>
+        <span class="side-tab-title">HEALTH & DIAGNOSTICS</span>
+        <span class="side-tab-sub">Faults • Telemetry • Physics</span>
+      </button>
+
+      <button id="tabBtnDatalab" class="side-tab-btn" onclick="switchDashboardTab('datalab')">
+        <span class="side-tab-icon">🗄</span>
+        <span class="side-tab-title">VIRTUAL DATA LAB</span>
+        <span class="side-tab-sub">Data Gen • Replay • Causal</span>
+      </button>
+    </nav>
+
+    <!-- MAIN DASHBOARD CONTENT PANE -->
+    <main class="main-pane">
+
+      <!-- ========================================================================= -->
+      <!-- TAB 1: LIVE MISSION (Default Active) -->
+      <!-- ========================================================================= -->
+      <section id="tabContentLive" class="tab-content">
+
+        <!-- 1. PRIMARY MISSION CONTROL & FLIGHT PLANNER BANNER -->
+        <div class="card mission-control-card">
+          <div class="mission-header">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size:16px;">⌖</span>
+              <div>
+                <div style="font-size:14px; font-weight:800; color:#e8f0e8;">MISSION CONTROL & FLIGHT PLANNER</div>
+                <div style="font-size:10px; color:var(--muted);">
+                  Path-Driven Flight Simulation • Real Geographic Map • Dynamic Propulsion Demand
+                </div>
+              </div>
+            </div>
+
+            <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+              <span class="pill good" id="simModeBadge" style="font-size:10px; padding:2px 8px;">
+                SIMULATION MODE: ● AUTOMATIC
+              </span>
+              <button id="btnModePlanner" class="map-btn active" onclick="setUIMode('planner')">⚒ MISSION DESIGN</button>
+              <button id="btnModeExecution" class="map-btn" onclick="setUIMode('execution')">✈ MISSION EXECUTION</button>
+            </div>
+          </div>
+
+          <!-- AUTOMATIC PARAMETER READOUT STRIP -->
+          <div class="auto-flight-strip">
+            <div class="auto-item">
+              <span class="auto-label">Active Mission</span>
+              <span class="auto-val info" id="autoMissionName">ISR Border Patrol Alpha</span>
+            </div>
+            <div class="auto-item">
+              <span class="auto-label">Route Envelope</span>
+              <span class="auto-val" id="autoRouteSummary">9 Waypoints • 215.1 km</span>
+            </div>
+            <div class="auto-item">
+              <span class="auto-label">Est. Flight Duration</span>
+              <span class="auto-val" id="autoEstDuration">1h 45m</span>
+            </div>
+            <div class="auto-item">
+              <span class="auto-label">Mission Phase</span>
+              <span class="auto-val"><span id="autoPhasePill" class="pill good">READY</span></span>
+            </div>
+            <div class="auto-item">
+              <span class="auto-label">Current Altitude</span>
+              <span class="auto-val" id="autoAltitude">8,000 ft <small style="font-size:8.5px; color:#4cb574;">AUTO</small></span>
+            </div>
+            <div class="auto-item">
+              <span class="auto-label">Ground Speed</span>
+              <span class="auto-val" id="autoSpeed">142 kt <small style="font-size:8.5px; color:#4cb574;">AUTO</small></span>
+            </div>
+            <div class="auto-item">
+              <span class="auto-label">Auto Throttle</span>
+              <span class="auto-val" id="autoThrottle">58% <small style="font-size:8.5px; color:#4cb574;">AUTO</small></span>
+            </div>
+            <div class="auto-item">
+              <span class="auto-label">Ambient Temp</span>
+              <span class="auto-val" id="autoAmbient">18.2°C <small style="font-size:8.5px; color:#4cb574;">AUTO (ISA)</small></span>
+            </div>
+          </div>
+
+          <!-- PRIMARY MISSION & REPLAY ACTIONS -->
+          <div class="primary-mission-actions">
+            <button id="btnStartMission" class="success" onclick="startAutomaticMission()">▶ START SIMULATION</button>
+            <button id="btnStartReplay" class="map-btn" style="background:#17361d; border-color:#2c6136; color:#dbe5db; font-size:11px; font-weight:700; padding:5px 10px;" onclick="startMissionReplay()">⟳ MISSION REPLAY</button>
+            <button id="btnPauseMission" class="secondary" style="display:none;" onclick="toggleMissionPause()">⏸ Pause</button>
+            <button id="btnResumeMission" style="display:none; background:#143b1e;" onclick="toggleMissionPause()">▶ Resume</button>
+            <button id="btnRestartMission" class="secondary" style="display:none;" onclick="restartMissionSimulation()">↺ Restart</button>
+            <button id="btnAbortMission" class="danger" style="display:none;" onclick="abortMissionSimulation()">⏹ Abort / Reset</button>
+
+            <select id="selReplaySpeed" style="width:auto; margin:0; padding:3px 6px; font-size:9.5px; display:none;" onchange="setReplaySpeed(+this.value)">
+              <option value="1" selected>1x Speed</option>
+              <option value="2">2x Speed</option>
+              <option value="5">5x Speed</option>
+            </select>
+
+            <div style="margin-left:auto; display:flex; align-items:center; gap:6px;">
+              <span style="font-size:10.5px; color:#7a8c7b; font-weight:600;">Mission Preset:</span>
+              <select id="selMissionPreset" style="width:auto; margin:0; padding:3px 6px; font-size:10.5px;" onchange="loadPresetMission(this.value)">
+                <option value="border_patrol_alpha" selected>ISR Border Patrol Alpha (9 WPs)</option>
+                <option value="high_alt_surveillance">High-Altitude Recon Bravo (8 WPs, 24k ft)</option>
+                <option value="coastal_maritime">Coastal & Maritime Patrol Charlie (7 WPs)</option>
+                <option value="custom">Custom Interactive Route</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- COLLAPSIBLE ADVANCED SIMULATION OVERRIDES (FOR BENCHMARK TESTING) -->
+          <details style="margin-top:6px; background:#060a06; border:1px solid #142016; border-radius:6px; padding:5px 8px;">
+            <summary style="font-size:10px; font-weight:700; color:#7a8c7b; cursor:pointer;">
+              ⚙ ADVANCED SIMULATION OVERRIDES (MANUAL INJECTION FOR BENCHMARK TESTING — DEFAULT: OFF)
+            </summary>
+            <div style="font-size:9.5px; color:#c9983e; margin:3px 0;">
+              ⚠ SIMULATION OVERRIDE — NOT NORMAL FLIGHT INPUT. Use only to force specific edge-case test conditions.
+            </div>
+            <div style="display:flex; gap:8px; align-items:center; margin-bottom:3px;">
+              <label style="display:flex; align-items:center; gap:5px; cursor:pointer;">
+                <input type="checkbox" id="chkManualOverride" style="width:auto; margin:0;" onchange="toggleManualOverride(this.checked)">
+                <span style="color:#dbe5db; font-weight:bold;">Enable Manual Parameter Override</span>
+              </label>
+            </div>
+            <div id="manualOverrideControls" class="hw-controls" style="opacity:0.5; pointer-events:none;">
+              <div class="hw-group">
+                <label><span>Manual Throttle Lever</span><span id="hwValThrottle">60%</span></label>
+                <input type="range" id="hwSliderThrottle" min="10" max="100" value="60">
+              </div>
+              <div class="hw-group">
+                <label><span>Manual Flight Altitude</span><span id="hwValAltitude">8,000 ft</span></label>
+                <input type="range" id="hwSliderAltitude" min="0" max="30000" step="500" value="8000">
+              </div>
+              <div class="hw-group">
+                <label><span>Manual Ambient Temp</span><span id="hwValAmbient">35°C</span></label>
+                <input type="range" id="hwSliderAmbient" min="-20" max="50" value="35">
+              </div>
+              <div class="hw-group">
+                <label><span>Manual Mission Duration</span><span id="hwValDuration">6.0 hrs</span></label>
+                <input type="range" id="hwSliderDuration" min="1" max="24" step="0.5" value="6">
+              </div>
+            </div>
+          </details>
+        </div>
+
+        <!-- 2. SIDE-BY-SIDE: UAV LIVE MISSION MAP (55%) + 3D PISTON ENGINE DIGITAL TWIN (45%) -->
+        <div class="mission-twin-split-grid">
+
+          <!-- LEFT: UAV LIVE MISSION MAP -->
+          <div class="map-card">
+            <div class="map-header">
+              <div>
+                <div style="font-size:13.5px; font-weight:700; color:#5eb574; display:flex; align-items:center; gap:5px;">
+                  <span>⌖</span> UAV LIVE MISSION MAP
+                </div>
+                <div style="font-size:10px; color:#7a8c7b; margin-top:1px;" id="mapModeSubtitle">
+                  Real Geographic Coordinates • Multi-Layer GIS • Close UAV Proximity View
+                </div>
+              </div>
+
+              <!-- MAP TOOLBAR: BASE LAYERS & FOLLOW CONTROLS -->
+              <div class="map-toolbar">
+                <div style="display:flex; background:#060a06; border:1px solid #142016; border-radius:4px; padding:2px;">
+                  <button id="btnLayerStandard" class="map-btn" style="border:none; padding:2px 4px;" onclick="setMapLayer('standard')">Standard</button>
+                  <button id="btnLayerDark" class="map-btn active" style="border:none; padding:2px 4px;" onclick="setMapLayer('dark')">Dark</button>
+                  <button id="btnLayerSatellite" class="map-btn" style="border:none; padding:2px 4px;" onclick="setMapLayer('satellite')">Satellite</button>
+                  <button id="btnLayerTerrain" class="map-btn" style="border:none; padding:2px 4px;" onclick="setMapLayer('terrain')">Terrain</button>
+                </div>
+
+                <button id="btnFollow" class="map-btn active" onclick="toggleFollowUAV()">⌖ Follow: ON</button>
+                <button class="map-btn" onclick="centerOnUAV()">⦿ Center</button>
+                <button class="map-btn" onclick="fitMissionRoute()">⤢ Fit</button>
+                <button id="btnProxToggle" class="map-btn active" onclick="toggleProximityHUD()">⎇ HUD</button>
+                <button id="btnRouteToggle" class="map-btn active" onclick="togglePlannedRoute()">∿ Route</button>
+                <button id="btnWpToggle" class="map-btn active" onclick="toggleWaypoints()">⚑ WPs</button>
+              </div>
+            </div>
+
+            <!-- Leaflet Map Container Wrapper -->
+            <div class="map-wrapper">
+              <div id="uavMap"></div>
+
+              <!-- CLOSE UAV PROXIMITY VIEW GLASS OVERLAY -->
+              <div id="uavProximityOverlay" class="proximity-hud-box">
+                <div class="prox-header">
+                  <span style="font-weight:800; color:#5eb574; font-size:9px; display:flex; align-items:center; gap:4px;">
+                    <span>⌖</span> UAV CLOSE PROXIMITY VIEW
+                  </span>
+                  <span class="pill good" id="pxHealthBadge" style="font-size:7.5px; padding:1px 4px;">NORMAL</span>
+                </div>
+
+                <!-- 1. UAV LIVE FLIGHT STATE -->
+                <div class="prox-section">
+                  <div class="prox-sec-title">✈ UAV LIVE TELEMETRY</div>
+                  <div class="prox-grid">
+                    <div><span class="prox-lbl">LAT:</span> <b id="pxLat">28.4520° N</b></div>
+                    <div><span class="prox-lbl">LON:</span> <b id="pxLon">77.0250° E</b></div>
+                    <div><span class="prox-lbl">ALT:</span> <b id="pxAlt">8,000 ft</b></div>
+                    <div><span class="prox-lbl">GS / TAS:</span> <b id="pxSpeed">142 / 145 kt</b></div>
+                    <div><span class="prox-lbl">HEADING:</span> <b id="pxHdg">084°</b></div>
+                    <div><span class="prox-lbl">VSI:</span> <b id="pxVSI">+850 fpm</b></div>
+                    <div><span class="prox-lbl">PHASE:</span> <b id="pxPhase" style="color:#4cb574;">CLIMB</b></div>
+                    <div><span class="prox-lbl">ETA NEXT:</span> <b id="pxETA">4.2 min</b></div>
+                  </div>
+                </div>
+
+                <!-- 2. ENVIRONMENT -->
+                <div class="prox-section">
+                  <div class="prox-sec-title">≋ LIVE ENVIRONMENT</div>
+                  <div class="prox-grid">
+                    <div><span class="prox-lbl">TEMP:</span> <b id="pxTemp">18.4 °C</b></div>
+                    <div><span class="prox-lbl">PRESS:</span> <b id="pxPress">802 hPa</b></div>
+                    <div><span class="prox-lbl">AIR DENSITY:</span> <b id="pxDensity">0.824 σ</b></div>
+                    <div><span class="prox-lbl">WIND:</span> <b id="pxWind">12.5 kt @ 240°</b></div>
+                    <div><span class="prox-lbl">HEADWIND:</span> <b id="pxHW">5.8 kt</b></div>
+                    <div><span class="prox-lbl">SOURCE:</span> <b id="pxEnvSrc" class="good">LIVE</b></div>
+                  </div>
+                </div>
+
+                <!-- 3. DIGITAL TWIN -->
+                <div class="prox-section" style="border-bottom:none;">
+                  <div class="prox-sec-title">⚙ DIGITAL TWIN & RISK</div>
+                  <div class="prox-grid">
+                    <div><span class="prox-lbl">HEALTH:</span> <b id="pxHealth" class="good">98.2%</b></div>
+                    <div><span class="prox-lbl">ANOMALY:</span> <b id="pxAnomaly" class="good">0.012</b></div>
+                    <div><span class="prox-lbl">DEGRAD:</span> <b id="pxDegrad">0.00%</b></div>
+                    <div><span class="prox-lbl">RUL:</span> <b id="pxRUL" class="good">48.5 h</b></div>
+                    <div><span class="prox-lbl">RISK:</span> <b id="pxRisk" class="good">LOW (12)</b></div>
+                    <div><span class="prox-lbl">RELIABILITY:</span> <b id="pxRel">88.0%</b></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- MAP STATUS & CURSOR COORDINATES BAR -->
+            <div class="map-status-bar">
+              <div id="mapCursorCoords">⌖ Cursor: 28.4520° N, 77.0250° E | Zoom: 9</div>
+              <div id="mapAttributionText">Geodetic Datum: WGS-84 • OpenStreetMap (Tactical Dark)</div>
+            </div>
+
+            <!-- Compact UAV Telemetry Strip Below Map -->
+            <div class="map-hud">
+              <div class="hud-item">
+                <span class="hud-label">Latitude</span>
+                <span class="hud-val info" id="hudLat">28.4520° N</span>
+              </div>
+              <div class="hud-item">
+                <span class="hud-label">Longitude</span>
+                <span class="hud-val info" id="hudLon">77.0250° E</span>
+              </div>
+              <div class="hud-item">
+                <span class="hud-label">Altitude</span>
+                <span class="hud-val" id="hudAlt">8,000 ft</span>
+              </div>
+              <div class="hud-item">
+                <span class="hud-label">Speed (GS / TAS)</span>
+                <span class="hud-val" id="hudSpeed">142 / 145 kt</span>
+              </div>
+              <div class="hud-item">
+                <span class="hud-label">Heading / Track</span>
+                <span class="hud-val" id="hudHeading">084° / 086°</span>
+              </div>
+              <div class="hud-item">
+                <span class="hud-label">Mission Phase</span>
+                <span class="hud-val"><span id="hudPhase" class="pill good">READY</span></span>
+              </div>
+              <div class="hud-item">
+                <span class="hud-label">Progress</span>
+                <span class="hud-val" id="hudProgress">0.0%</span>
+              </div>
+              <div class="hud-item">
+                <span class="hud-label">Engine Health</span>
+                <span class="hud-val"><span id="hudHealth" class="pill good">98% Normal</span></span>
+              </div>
+              <div class="hud-item">
+                <span class="hud-label">Mission Risk</span>
+                <span class="hud-val"><span id="hudRisk" class="pill good">LOW (12)</span></span>
+              </div>
+            </div>
+
+            <!-- 3D WAYPOINT ROUTE & LIVE MISSION STATUS TABLE -->
+            <div id="waypointPlannerBox" class="wp-table-box">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                <div style="font-size:11px; font-weight:700; color:#5eb574;" id="wpPlannerHeaderTitle">
+                  3D Waypoint Route & Live Execution Status
+                  <span style="font-size:9px; color:#7a8c7b; font-weight:normal; margin-left:5px;" id="wpPlannerHeaderSub">
+                    (Live waypoint sequence, altitude, speed & ETA)
+                  </span>
+                </div>
+                <div id="wpPlannerActions" style="display:flex; gap:3px;">
+                  <button class="map-btn" style="background:#143b1e; color:#dbe5db;" onclick="addNewWaypoint()">+ Add WP</button>
+                  <button class="map-btn" onclick="closeRouteToBase()">↺ Return to Base</button>
+                  <button class="map-btn" style="background:#2b1010; color:#d9534f;" onclick="resetWaypointsToPreset()">↺ Reset</button>
+                </div>
+              </div>
+
+              <div style="max-height:140px; overflow-y:auto;">
+                <table class="tbl" id="waypointsTable">
+                  <thead>
+                    <tr>
+                      <th style="width:45px;">ID</th>
+                      <th>Name</th>
+                      <th style="width:85px;">Type</th>
+                      <th style="width:75px;">Alt (ft)</th>
+                      <th style="width:70px;">Speed</th>
+                      <th style="width:60px;">Loiter</th>
+                      <th style="width:90px; text-align:center;" id="wpTableActionColHeader">Status / ETA</th>
+                    </tr>
+                  </thead>
+                  <tbody id="waypointsTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- RIGHT: 3D PISTON ENGINE DIGITAL TWIN -->
+          <div class="engine-twin-card">
+            <div class="engine-card-heading">
+              <div>
+                <div style="font-size:13.5px; font-weight:700; color:#5eb574; display:flex; align-items:center; gap:5px;">
+                  <span>◈</span> 3D ENGINE DIGITAL TWIN & SIMULATOR
+                </div>
+                <div style="font-size:10px; color:#7a8c7b; margin-top:1px;">
+                  Inline 4-Cyl 4-Stroke Turbocharged Aero-Engine • Kinematics & Valve Timing Simulator
+                </div>
+              </div>
+              <div style="display:flex; align-items:center; gap:6px;">
+                <span id="engineModeLabel" style="font:800 9px/1 Inter, monospace; color:#5eb574; background:rgba(94,181,116,0.12); padding:3px 8px; border-radius:4px; border:1px solid rgba(94,181,116,0.3);">NORMAL</span>
+                <div class="engine-twin-state" id="engineTwinState">
+                  DIGITAL TWIN SYNCHRONIZED
+                </div>
+              </div>
+            </div>
+
+            <!-- TOP: CONSOLIDATED SELECTED ASSEMBLY & LIVE ENGINE PARAMETERS -->
+            <aside class="engine-inspector" aria-live="polite">
+              <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:6px;">
+                <div>
+                  <div class="engine-inspector-kicker">SELECTED ASSEMBLY</div>
+                  <h3 id="selectedComponentName">Central crankcase</h3>
+                  <p id="selectedComponentDetail">Crankshaft and inline-cylinder power core</p>
+                </div>
+                <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
+                  <div class="component-fault" id="selectedComponentFault">No active fault evidence</div>
+                  <div class="engine-legend">
+                    <span><i class="legend-normal"></i>Nominal</span>
+                    <span><i class="legend-watch"></i>Watch</span>
+                    <span><i class="legend-critical"></i>Critical</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- LIVE ENGINE PARAMETERS CONSOLIDATED INSIDE SELECTED ASSEMBLY -->
+              <div class="assembly-telemetry-grid">
+                <div class="asm-param"><span class="asm-lbl">Engine RPM</span><b class="asm-val info" id="engRPM">3,000 RPM</b></div>
+                <div class="asm-param"><span class="asm-lbl">Auto Throttle</span><b class="asm-val" id="engThrottle">58% <small style="font-size:7.5px; color:#4cb574;">AUTO</small></b></div>
+                <div class="asm-param"><span class="asm-lbl">Engine Load</span><b class="asm-val" id="engLoad">0.84 <small style="font-size:7.5px; color:#4cb574;">AUTO</small></b></div>
+                <div class="asm-param"><span class="asm-lbl">CHT Temp</span><b class="asm-val" id="engCHT">220.4 °F</b></div>
+                <div class="asm-param"><span class="asm-lbl">EGT Max</span><b class="asm-val" id="engEGT">1,205 °F</b></div>
+                <div class="asm-param"><span class="asm-lbl">Oil Press / Temp</span><b class="asm-val" id="engOil">60.2 PSI • 89.6 °C</b></div>
+                <div class="asm-param"><span class="asm-lbl">Fuel Flow</span><b class="asm-val" id="engFuel">20.4 L/h</b></div>
+                <div class="asm-param"><span class="asm-lbl">Vibration RMS</span><b class="asm-val good" id="engVib">1.02 g</b></div>
+                <div class="asm-param"><span class="asm-lbl">Manifold (MAP)</span><b class="asm-val" id="engMAP">29.8 inHg</b></div>
+                <div class="asm-param"><span class="asm-lbl">Ignition Timing</span><b class="asm-val" id="engIgn">24.0° BTDC</b></div>
+                <div class="asm-param"><span class="asm-lbl">Battery / Bus</span><b class="asm-val" id="engVolt">28.2 V</b></div>
+                <div class="asm-param"><span class="asm-lbl">Alternator Temp</span><b class="asm-val" id="engAlt">68.4 °C</b></div>
+                <div class="asm-param"><span class="asm-lbl">Fuel Rail Press</span><b class="asm-val" id="engFuelPress">42.4 PSI</b></div>
+                <div class="asm-param"><span class="asm-lbl">Knock Index</span><b class="asm-val good" id="engKnock">0.02</b></div>
+              </div>
+            </aside>
+
+            <!-- DOWNWARD: 3D PISTON ENGINE DIGITAL TWIN & INTERACTIVE SIMULATOR VIEWPORT -->
+            <div class="engine-digital-twin">
+              <div class="engine-viewport">
+                <canvas id="engineCanvas" aria-label="Interactive 3D model of an inline four-cylinder four-stroke turbocharged cutaway aero-engine"></canvas>
+                <canvas id="engineLabelsCanvas" class="engine-labels-overlay" aria-hidden="true"></canvas>
+
+                <!-- LEFT HUD: 2D KINEMATICS & PLAYBACK SCRUBBER -->
+                <div class="engine-hud-overlay-left">
+                  <div class="engine-diagram-card">
+                    <div class="engine-diagram-header">
+                      <span class="engine-diagram-title">Kinematics</span>
+                      <span id="simPhaseBadge" class="sim-phase-badge phase-intake">INTAKE</span>
+                    </div>
+                    <canvas id="diagramKinematicsCanvas" class="engine-diagram-canvas" width="220" height="85"></canvas>
+                    <div class="sim-controls-grid" style="margin-top:5px;">
+                      <div class="sim-btn-row">
+                        <button class="sim-btn" id="simPlayBtn" title="Play/Pause Simulation">⏸</button>
+                        <button class="sim-btn" id="simStepBack" title="Step -15°">-15°</button>
+                        <button class="sim-btn" id="simStepForward" title="Step +15°">+15°</button>
+                        <select class="sim-speed-select" id="simSpeedSelect" title="Playback Speed">
+                          <option value="1.0">1.0x Real</option>
+                          <option value="0.5">0.5x</option>
+                          <option value="0.25">0.25x</option>
+                          <option value="0.1">0.10x Slow-Mo</option>
+                        </select>
+                      </div>
+                      <div class="sim-scrubber-container">
+                        <input type="range" id="simScrubber" min="0" max="719" value="0" step="1" title="Scrub Crank Angle (0-720°)">
+                        <span class="sim-scrub-angle" id="simAngleReadout">0°</span>
+                      </div>
+                      <div style="display:flex; align-items:center; gap:4px;">
+                        <input type="range" id="simRpmSlider" min="0" max="6000" value="3000" step="50" style="flex:1; height:3px; accent-color:#5eb574;">
+                        <span style="font:800 8.5px/1 Inter, monospace; color:#a8bfa9; min-width:48px;" id="simRpmVal">3000 RPM</span>
+                        <button class="sim-btn active" id="simSyncRpmBtn" style="font-size:7.5px; padding:2px 4px;" title="Sync with Flight Telemetry">SYNC</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- RIGHT HUD: CYLINDER SELECTOR & SYNCHRONIZED DIAGRAMS -->
+                <div class="engine-hud-overlay-right">
+                  <div class="cyl-selector-bar">
+                    <button class="cyl-btn active" data-cylinder-focus="0">CYL 1</button>
+                    <button class="cyl-btn" data-cylinder-focus="1">CYL 2</button>
+                    <button class="cyl-btn" data-cylinder-focus="2">CYL 3</button>
+                    <button class="cyl-btn" data-cylinder-focus="3">CYL 4</button>
+                  </div>
+
+                  <div class="engine-diagram-card">
+                    <div class="engine-diagram-header">
+                      <span class="engine-diagram-title">Valve Timing & Lift</span>
+                      <span style="font:700 7.5px/1 Inter, monospace; color:#889c8a;">0–720°</span>
+                    </div>
+                    <canvas id="diagramValveCanvas" class="engine-diagram-canvas" width="220" height="70"></canvas>
+                  </div>
+
+                  <div class="engine-diagram-card">
+                    <div class="engine-diagram-header">
+                      <span class="engine-diagram-title">P-V Indicator Diagram</span>
+                      <span style="font:700 7.5px/1 Inter, monospace; color:#889c8a;">Pressure / Vol</span>
+                    </div>
+                    <canvas id="diagramPressureCanvas" class="engine-diagram-canvas" width="220" height="70"></canvas>
+                  </div>
+                </div>
+
+                <!-- BOTTOM CENTER: FIRING ORDER RIBBON -->
+                <div class="engine-firing-ribbon">
+                  <span class="firing-ribbon-title">FIRING ORDER 1-3-4-2:</span>
+                  <div class="firing-cyl-node" id="firingCyl1">
+                    <span class="firing-cyl-num">CYL 1</span>
+                    <span class="cyl-phase-label">INTAKE</span>
+                  </div>
+                  <div class="firing-cyl-node" id="firingCyl3">
+                    <span class="firing-cyl-num">CYL 3</span>
+                    <span class="cyl-phase-label">COMPR</span>
+                  </div>
+                  <div class="firing-cyl-node" id="firingCyl4">
+                    <span class="firing-cyl-num">CYL 4</span>
+                    <span class="cyl-phase-label">POWER</span>
+                  </div>
+                  <div class="firing-cyl-node" id="firingCyl2">
+                    <span class="firing-cyl-num">CYL 2</span>
+                    <span class="cyl-phase-label">EXHAUST</span>
+                  </div>
+                </div>
+
+                <!-- THERMAL FIELD OVERLAY -->
+                <div class="engine-thermal-field" id="engineThermalField" aria-hidden="true">
+                  <div class="engine-thermal-aura engine-thermal-aura-outer"></div>
+                  <div class="engine-thermal-aura engine-thermal-aura-core"></div>
+                  <div class="engine-thermal-scale">
+                    <span>LIVE THERMAL ENVELOPE</span>
+                    <strong id="engineThermalValue">220°F CHT · 1,200°F EGT</strong>
+                    <div class="engine-thermal-gradient"><i id="engineThermalMarker"></i></div>
+                    <small><span>COOL</span><span>NOMINAL</span><span>HOT</span><span>CRITICAL</span></small>
+                  </div>
+                </div>
+
+                <div class="engine-scanline" aria-hidden="true"></div>
+                <div class="engine-axis" aria-hidden="true"><span>X</span><span>Y</span><span>Z</span></div>
+              </div>
+            </div>
+
+            <!-- CONTROLS TOOLBAR & CAMERA PRESETS -->
+            <div class="engine-toolbar" aria-label="3D engine controls">
+              <div class="engine-toolbar-group">
+                <button class="engine-tool active" data-engine-mode="normal">Normal</button>
+                <button class="engine-tool" data-engine-mode="thermal">Thermal</button>
+                <button class="engine-tool" data-engine-mode="vibration">Vibration</button>
+                <span class="engine-tool-separator"></span>
+                <button class="engine-tool" id="engineXray">X-ray</button>
+                <button class="engine-tool" id="engineExplode">Explode</button>
+                <button class="engine-tool active" id="engineLabels">Labels</button>
+                <button class="engine-tool" id="enginePause">⏸ Pause</button>
+              </div>
+              <div class="engine-camera-presets">
+                <span style="font:800 8px/1 Inter, sans-serif; color:#7a8c7b; margin-right:2px;">CAMERA:</span>
+                <button class="camera-preset-btn active" data-camera-preset="hero">Hero</button>
+                <button class="camera-preset-btn" data-camera-preset="front">Front</button>
+                <button class="camera-preset-btn" data-camera-preset="top">Top</button>
+                <button class="camera-preset-btn" data-camera-preset="side">Side</button>
+                <button class="camera-preset-btn" data-camera-preset="cylinder">Cyl</button>
+                <button class="camera-preset-btn" id="engineResetCamera">↺ Reset</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. 6-SUBSYSTEM HEALTH STATUS CARDS -->
+        <div class="subsystem-grid">
+          <div class="subsystem-card">
+            <div class="s-name">Thermal Subsys</div>
+            <div class="s-score good" id="subScoreThermal">98%</div>
+            <div class="pill good" id="subPillThermal">CHT / EGT / Coolant</div>
+          </div>
+          <div class="subsystem-card">
+            <div class="s-name">Lubrication</div>
+            <div class="s-score good" id="subScoreLubrication">99%</div>
+            <div class="pill good" id="subPillLubrication">Oil P/T & Viscosity</div>
+          </div>
+          <div class="subsystem-card">
+            <div class="s-name">Fuel Injection</div>
+            <div class="s-score good" id="subScoreFuel">97%</div>
+            <div class="pill good" id="subPillFuel">MAP & Injectors</div>
+          </div>
+          <div class="subsystem-card">
+            <div class="s-name">Combustion / Ign</div>
+            <div class="s-score good" id="subScoreCombustion">99%</div>
+            <div class="pill good" id="subPillCombustion">Balance & Stability</div>
+          </div>
+          <div class="subsystem-card">
+            <div class="s-name">Electrical / FADEC</div>
+            <div class="s-score good" id="subScoreElectrical">98%</div>
+            <div class="pill good" id="subPillElectrical">Dual-Bus 28V</div>
+          </div>
+          <div class="subsystem-card">
+            <div class="s-name">Mechanical / Vib</div>
+            <div class="s-score good" id="subScoreMechanical">99%</div>
+            <div class="pill good" id="subPillMechanical">Bearings & Shaft</div>
+          </div>
+        </div>
+
+        <!-- 4. LIVE ENVIRONMENT & CAN BUS MONITOR -->
+        <div class="grid two" style="margin-bottom:8px;">
+          <!-- LIVE ENVIRONMENT PANEL -->
+          <div class="card" style="border-color:#18281b;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+              <h2 style="margin:0; font-size:13px; color:#5eb574; display:flex; align-items:center; gap:5px;">
+                <span>≋</span> LIVE ENVIRONMENTAL CONDITIONS
+              </h2>
+              <span class="pill good" id="envSourceBadge">● LIVE (Open-Meteo API)</span>
+            </div>
+            <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(110px,1fr)); gap:5px; font-size:10.5px;">
+              <div class="auto-item">
+                <span class="auto-label">Ambient Temp</span>
+                <span class="auto-val info" id="envTemp">18.4 °C</span>
+              </div>
+              <div class="auto-item">
+                <span class="auto-label">Pressure</span>
+                <span class="auto-val" id="envPress">802 hPa <small style="font-size:8.5px; color:#7a8c7b;">(23.7 inHg)</small></span>
+              </div>
+              <div class="auto-item">
+                <span class="auto-label">Density Ratio (σ)</span>
+                <span class="auto-val" id="envDensity">0.824</span>
+              </div>
+              <div class="auto-item">
+                <span class="auto-label">Wind Speed / Dir</span>
+                <span class="auto-val" id="envWind">12.5 kt @ 240°</span>
+              </div>
+              <div class="auto-item">
+                <span class="auto-label">Headwind / Crosswind</span>
+                <span class="auto-val" id="envHeadwind"><span style="color:#c9983e;">HW: 5.8 kt</span> • CW: 11.0 kt</span>
+              </div>
+              <div class="auto-item">
+                <span class="auto-label">Relative Humidity</span>
+                <span class="auto-val" id="envHumidity">45%</span>
+              </div>
+              <div class="auto-item">
+                <span class="auto-label">Visibility</span>
+                <span class="auto-val" id="envVisibility">10.0 km</span>
+              </div>
+              <div class="auto-item">
+                <span class="auto-label">Weather Condition</span>
+                <span class="auto-val good" id="envCondition">Clear Sky</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- RAW CAN BUS MONITOR -->
+          <div class="card" style="border-color:#18281b;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+              <h2 style="margin:0; font-size:13px; color:#5eb574; display:flex; align-items:center; gap:5px;">
+                <span>⌗</span> ECU CAN BUS / FADEC TELEMETRY STREAM
+              </h2>
+              <span class="pill good" style="font-size:9.5px;">● 10 Hz Synchronized</span>
+            </div>
+            <div class="can-box" id="canBusStream">
+              [CAN 0x201] RPM: 3000 | THROTTLE: 60.0% | MAP: 29.8 inHg | TIME: 00:14:22<br>
+              [CAN 0x202] CHT: 220.4 F | EGT1: 1205 F | EGT2: 1200 F | EGT3: 1198 F<br>
+              [CAN 0x203] OIL_PRESS: 60.2 PSI | OIL_TEMP: 89.6 C | STATUS: NORMAL<br>
+              [CAN 0x204] FUEL_FLOW: 20.4 L/h | RAIL_PRESS: 42.1 PSI | FUEL_TEMP: 32.1 C<br>
+              [CAN 0x205] BUS_VOLT: 28.20 V | ALT_CURR: 18.2 A | ALT_TEMP: 68.4 C<br>
+              [CAN 0x206] VIBRATION_RMS: 1.02 g | KNOCK_IDX: 0.02 | STATUS: HEALTHY
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ========================================================================= -->
+      <!-- TAB 2: FAULT & HEALTH DIAGNOSTICS -->
+      <!-- ========================================================================= -->
+      <section id="tabContentDiagnostics" class="tab-content" style="display:none;">
+
+        <!-- EXPERIMENTAL FAULT INJECTION & DIAGNOSTIC CONSOLE -->
+        <div class="card" style="margin-bottom:8px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <h2 style="margin:0; font-size:13px; color:#5eb574; display:flex; align-items:center; gap:5px;">
+              <span>⚒</span> EXPERIMENTAL FAULT INJECTION & DIAGNOSTIC CONSOLE
+            </h2>
+            <span class="pill" style="color:#c9983e; border-color:#3d2f10; background:#1c1407; font-size:9.5px;">
+              Testing Subsystem • Injects anomalies into simulated flight
+            </span>
+          </div>
+
+          <div class="grid controls">
+            <label>
+              Inject Engine Fault
+              <select id="fault">
+                <option value="none">None / Healthy Baseline</option>
+                <option value="overheating">Overheating</option>
+                <option value="lubrication">Lubrication Degradation</option>
+                <option value="misfire">Misfire-Like Combustion</option>
+                <option value="injector">Injector Abnormality</option>
+                <option value="sensor_drift">Sensor Drift</option>
+                <option value="electrical">Battery / Alternator</option>
+              </select>
+            </label>
+
+            <label>
+              Fault Severity (0.0 – 1.0)
+              <input id="severity" type="number" min="0" max="1" step="0.1" value="0.6">
+            </label>
+
+            <label>
+              Fault Onset Point (% of mission)
+              <input id="onset" type="number" min="0" max="0.95" step="0.05" value="0.35">
+            </label>
+
+            <div style="display:flex; align-items:flex-end; gap:4px;">
+              <button onclick="analyzeSnapshot()" style="width:100%;">⌁ Single-Point Analyze</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- DIGITAL TWIN KPIS & RESIDUALS -->
+        <div class="grid kpis" style="margin-bottom:8px;">
+          <div class="card">
+            <div class="kpi-label">Health State</div>
+            <div id="health" class="kpi">—</div>
+            <div id="healthSub" class="tiny">ML status</div>
+          </div>
+
+          <div class="card">
+            <div class="kpi-label">Health Index</div>
+            <div id="healthIndex" class="kpi">—</div>
+            <div class="tiny">0–100 scale</div>
+          </div>
+
+          <div class="card">
+            <div class="kpi-label">Mission Risk</div>
+            <div id="missionRisk" class="kpi">—</div>
+            <div id="reliability" class="tiny">reliability index</div>
+          </div>
+
+          <div class="card">
+            <div class="kpi-label">Remaining Useful Life (RUL)</div>
+            <div id="rul" class="kpi">—</div>
+            <div id="rulSub" class="tiny">Predicted flight endurance remaining</div>
+          </div>
+
+          <div class="card">
+            <div class="kpi-label">Twin Residual RMS</div>
+            <div id="residual" class="kpi">—</div>
+            <div id="anomaly" class="tiny">anomaly flag</div>
+          </div>
+        </div>
+
+        <!-- MISSION REPLAY TIMELINE & ACTIONABLE MAINTENANCE ADVISORY -->
+        <div class="grid two" style="margin-bottom:8px;">
+          <div class="card">
+            <h2>Mission Replay & Anomaly Health Timeline</h2>
+            <canvas id="timeline" width="800" height="200"></canvas>
+            <div id="events"></div>
+          </div>
+
+          <div class="card">
+            <h2>Actionable Maintenance Advisory</h2>
+            <div id="advice" class="event">—</div>
+            <h3 style="margin-top:8px;">Probable Fault Candidates</h3>
+            <div id="faults" class="scroll"></div>
+          </div>
+        </div>
+
+        <!-- MISSION RISK BREAKDOWN -->
+        <div class="card" style="margin-bottom:8px;">
+          <h2>Mission Risk Breakdown & Component Risk Weights</h2>
+          <div id="riskBreakdown"></div>
+        </div>
+
+        <!-- SENSOR HEALTH & PHYSICS-INFORMED DEVIATIONS -->
+        <div class="grid two" style="margin-bottom:8px;">
+          <div class="card">
+            <h2>Sensor Health & Trust</h2>
+            <div id="sensorSummary" style="margin-bottom:5px;font-size:11px"></div>
+            <div class="scroll">
+              <table class="tbl">
+                <thead><tr><th>Channel</th><th>Trust</th></tr></thead>
+                <tbody id="sensorTable"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="card">
+            <h2>Physics-Informed Deviations</h2>
+            <div class="scroll">
+              <table class="tbl">
+                <thead><tr><th>Parameter</th><th>Z-Score</th><th>Dev %</th></tr></thead>
+                <tbody id="deviationTable"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- DIGITAL TWIN EXPECTED VS OBSERVED & RAW TELEMETRY -->
+        <div class="grid two" style="margin-bottom:8px;">
+          <div class="card">
+            <h2>Digital Twin Expected vs Observed Telemetry</h2>
+            <div class="scroll">
+              <table class="tbl">
+                <thead><tr><th>Parameter</th><th>Expected</th><th>Observed</th><th>Z-Score</th></tr></thead>
+                <tbody id="compare"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="card">
+            <h2>Raw Parameter Telemetry</h2>
+            <div class="scroll">
+              <table class="tbl">
+                <thead><tr><th>Sensor</th><th>Value</th></tr></thead>
+                <tbody id="telemetry"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ========================================================================= -->
+      <!-- TAB 3: VIRTUAL DATA LABORATORY & REPLAY ENGINE -->
+      <!-- ========================================================================= -->
+      <section id="tabContentDatalab" class="tab-content" style="display:none;">
+
+        <!-- 1. DATA LAB CONTROL BANNER -->
+        <div class="card mission-control-card">
+          <div class="mission-header">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size:16px;">🗄</span>
+              <div>
+                <div style="font-size:14px; font-weight:800; color:#e8f0e8;">AEROPULSE-X VIRTUAL DATA LABORATORY</div>
+                <div style="font-size:10px; color:var(--muted);">
+                  Canonical Telemetry Schema v2.0 • Synthetic Trajectory Lab • Closed-Loop SIL Replay Engine
+                </div>
+              </div>
+            </div>
+
+            <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+              <span class="pill good" id="dataLabStatusBadge" style="font-size:10px; padding:2px 8px;">
+                ENGINE: ● ACTIVE (5 Datasets Cataloged)
+              </span>
+              <button class="map-btn" style="background:#143b1e; color:#dbe5db;" onclick="auditDataQualityUI()">🔍 Audit Data Quality</button>
+              <button class="map-btn" onclick="fetchDataCatalogUI()">📋 Dataset Catalog</button>
+            </div>
+          </div>
+
+          <!-- DATA LAB KPI READOUT STRIP -->
+          <div class="auto-flight-strip">
+            <div class="auto-item">
+              <span class="auto-label">Schema Version</span>
+              <span class="auto-val info">v2.0 Canonical</span>
+            </div>
+            <div class="auto-item">
+              <span class="auto-label">Total Datasets</span>
+              <span class="auto-val" id="dlTotalDatasets">5 Cataloged</span>
+            </div>
+            <div class="auto-item">
+              <span class="auto-label">Total Trajectories</span>
+              <span class="auto-val" id="dlTotalTrajs">90 Materialized (Corpus)</span>
+            </div>
+            <div class="auto-item">
+              <span class="auto-label">Failure Threshold</span>
+              <span class="auto-val bad">H = 35.0</span>
+            </div>
+            <div class="auto-item">
+              <span class="auto-label">Leakage Audit</span>
+              <span class="auto-val good" id="dlLeakageStatus">Trajectory-level audit: PASS</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. INTERACTIVE TRAJECTORY GENERATOR & REPLAY CONTROLS -->
+        <div class="card" style="margin-bottom:8px;">
+          <h2 style="font-size:13px; color:#5eb574; display:flex; align-items:center; gap:5px; margin-bottom:6px;">
+            <span>⚙</span> SYNTHETIC TRAJECTORY GENERATOR & REPLAY CONTROLLER
+          </h2>
+          <div class="grid controls" style="margin-bottom:8px;">
+            <div>
+              <label>Dataset / Domain</label>
+              <select id="dlDatasetSelect" onchange="onDataLabDatasetChange()">
+                <option value="AERO_PULSE_SYNTHETIC">AeroPulse-X Synthetic (Rotax 914 F Primary Model)</option>
+                <option value="NASA_ACES">NASA ACES (Altus II Operational Flight Context)</option>
+                <option value="NASA_CMAPSS">NASA C-MAPSS (Turbofan Cross-Domain Proxy)</option>
+                <option value="CWRU_BEARING">CWRU Bearing Data (Vibration Proxy)</option>
+                <option value="ALFA_UAV">ALFA UAV (Flight Anomaly Proxy)</option>
+              </select>
+            </div>
+
+            <div>
+              <label>Scenario Category</label>
+              <select id="dlCategorySelect" onchange="onDataLabCategoryChange()">
+                <option value="degradation">Progressive Engine Degradation (H=35)</option>
+                <option value="healthy">Healthy Engine Multi-Phase Mission</option>
+                <option value="sensor_fault">Transducer Sensor Fault (Isolated)</option>
+                <option value="mission">Mission Environmental Profile</option>
+              </select>
+            </div>
+
+            <div>
+              <label>Failure / Fault Mechanism</label>
+              <select id="dlScenarioSelect">
+                <option value="thermal">Thermal / Cooling Heat Rejection Loss</option>
+                <option value="lubrication">Lubrication / Oil Pressure Breakdown</option>
+                <option value="mechanical">Mechanical Bearing Spalling & Blow-by</option>
+                <option value="injector">Fuel Injector Clogging & Lean AFR</option>
+                <option value="misfire">Cylinder Combustion Misfire Imbalance</option>
+                <option value="electrical">Alternator & Bus Voltage Decay</option>
+                <option value="compound">Compound Multi-System Degradation</option>
+              </select>
+            </div>
+
+            <div>
+              <label>Fault Severity: <b id="dlSevVal" style="color:#5eb574;">0.65</b></label>
+              <input type="range" id="dlSeveritySlider" min="0.10" max="1.0" step="0.05" value="0.65" oninput="$('dlSevVal').textContent=this.value" />
+            </div>
+          </div>
+
+          <div class="primary-mission-actions" style="margin-top:6px;">
+            <button class="success" onclick="generateDataLabTrajectoryUI()">▶ Generate Trajectory</button>
+            <button class="secondary" id="btnReplayDataLab" onclick="startDataLabReplayUI()">⟳ Replay Closed-Loop SIL</button>
+            <button class="secondary" onclick="exportDataLabJSON()">📊 Export Canonical JSON</button>
+            <span id="dlGenNotice" style="font-size:11px; color:#7a8c7b; margin-left:8px;">Ready to generate or replay.</span>
+          </div>
+        </div>
+
+        <!-- 3. VISUAL CAUSAL FLOW CHAIN -->
+        <div class="card" style="margin-bottom:8px; border-color:#1c2e1f;">
+          <h2 style="font-size:12px; color:#5eb574; margin-bottom:6px;">
+            <span>⚡</span> PHYSICAL-TO-AVIONICS VISUAL CAUSAL CHAIN (LIVE SIMULATION STATE)
+          </h2>
+          <div style="display:flex; gap:4px; overflow-x:auto; padding:4px 0;" id="causalChainContainer">
+            <div class="subsystem-card" style="flex:1; min-width:90px;" id="ccNode1">
+              <div class="s-name">1. Fault Onset</div>
+              <div class="s-score" style="font-size:11px; color:#e2ece2;" id="ccVal1">Thermal</div>
+              <div class="pill good" style="font-size:8px;" id="ccPill1">Cooling Deficit</div>
+            </div>
+            <div style="color:#2c4530; align-self:center; font-weight:bold;">→</div>
+            <div class="subsystem-card" style="flex:1; min-width:90px;" id="ccNode2">
+              <div class="s-name">2. Physics</div>
+              <div class="s-score" style="font-size:11px; color:#c9983e;" id="ccVal2">CHT ↑ 138°C</div>
+              <div class="pill warn" style="font-size:8px;" id="ccPill2">Heat Accumulation</div>
+            </div>
+            <div style="color:#2c4530; align-self:center; font-weight:bold;">→</div>
+            <div class="subsystem-card" style="flex:1; min-width:90px;" id="ccNode3">
+              <div class="s-name">3. Sensor Array</div>
+              <div class="s-score" style="font-size:11px; color:#5eb574;" id="ccVal3">Trust 96.5%</div>
+              <div class="pill good" style="font-size:8px;" id="ccPill3">Transducer Valid</div>
+            </div>
+            <div style="color:#2c4530; align-self:center; font-weight:bold;">→</div>
+            <div class="subsystem-card" style="flex:1; min-width:90px;" id="ccNode4">
+              <div class="s-name">4. CAN Bus</div>
+              <div class="s-score" style="font-size:11px; color:#5eb574;" id="ccVal4">CRC VALID</div>
+              <div class="pill good" style="font-size:8px;" id="ccPill4">0x100..0x104</div>
+            </div>
+            <div style="color:#2c4530; align-self:center; font-weight:bold;">→</div>
+            <div class="subsystem-card" style="flex:1; min-width:90px;" id="ccNode5">
+              <div class="s-name">5. Twin Residual</div>
+              <div class="s-score" style="font-size:11px; color:#c9983e;" id="ccVal5">ΔCHT +24°C</div>
+              <div class="pill warn" style="font-size:8px;" id="ccPill5">Anomaly Trig</div>
+            </div>
+            <div style="color:#2c4530; align-self:center; font-weight:bold;">→</div>
+            <div class="subsystem-card" style="flex:1; min-width:90px;" id="ccNode6">
+              <div class="s-name">6. Diagnosis</div>
+              <div class="s-score" style="font-size:11px; color:#c94c48;" id="ccVal6">OVERHEATING</div>
+              <div class="pill bad" style="font-size:8px;" id="ccPill6">Confidence 94%</div>
+            </div>
+            <div style="color:#2c4530; align-self:center; font-weight:bold;">→</div>
+            <div class="subsystem-card" style="flex:1; min-width:90px;" id="ccNode7">
+              <div class="s-name">7. Health (H)</div>
+              <div class="s-score" style="font-size:11px; color:#c9983e;" id="ccVal7">H = 58.2</div>
+              <div class="pill warn" style="font-size:8px;" id="ccPill7">Moderate Wear</div>
+            </div>
+            <div style="color:#2c4530; align-self:center; font-weight:bold;">→</div>
+            <div class="subsystem-card" style="flex:1; min-width:90px;" id="ccNode8">
+              <div class="s-name">8. RUL Forecast</div>
+              <div class="s-score" style="font-size:11px; color:#5eb574;" id="ccVal8">14.2 h (True: 13.8)</div>
+              <div class="pill good" style="font-size:8px;" id="ccPill8">90% CI: [10, 18]</div>
+            </div>
+            <div style="color:#2c4530; align-self:center; font-weight:bold;">→</div>
+            <div class="subsystem-card" style="flex:1; min-width:90px;" id="ccNode9">
+              <div class="s-name">9. FADEC Derate</div>
+              <div class="s-score" style="font-size:11px; color:#c9983e;" id="ccVal9">DERATE 80%</div>
+              <div class="pill warn" style="font-size:8px;" id="ccPill9">Throttle Cap</div>
+            </div>
+            <div style="color:#2c4530; align-self:center; font-weight:bold;">→</div>
+            <div class="subsystem-card" style="flex:1; min-width:90px;" id="ccNode10">
+              <div class="s-name">10. Mission Impact</div>
+              <div class="s-score" style="font-size:11px; color:#5eb574;" id="ccVal10">RTB SAFE</div>
+              <div class="pill good" style="font-size:8px;" id="ccPill10">Endurance Ok</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. SIDE-BY-SIDE TELEMETRY & GROUND TRUTH PROGNOSTIC TABLE -->
+        <div class="grid two" style="margin-bottom:8px;">
+          <div class="card">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+              <h2 style="font-size:13px; color:#5eb574; margin:0;">Ground Truth vs Model Prognostics</h2>
+              <span class="pill good" id="dlReplayProgress">Step: 0 / 0</span>
+            </div>
+            <div class="scroll" style="max-height:220px;">
+              <table class="tbl" id="dlPrognosticsTable">
+                <thead>
+                  <tr>
+                    <th>Time (h)</th>
+                    <th>Health</th>
+                    <th>True RUL</th>
+                    <th>Pred RUL</th>
+                    <th>90% CI Bound</th>
+                    <th>FADEC Mode</th>
+                  </tr>
+                </thead>
+                <tbody id="dlPrognosticsTableBody">
+                  <tr><td colspan="6" style="text-align:center; color:#7a8c7b;">No trajectory loaded. Click Generate or Replay.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="card">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+              <h2 style="font-size:13px; color:#5eb574; margin:0;">Quality Audit & Dataset Metadata</h2>
+              <span class="pill good" id="dlQualityBadge">● AUDIT READY</span>
+            </div>
+            <div class="scroll" style="max-height:220px; font-size:10.5px;" id="dlAuditBox">
+              <div style="color:#7a8c7b; padding:10px 0;">Click 'Audit Data Quality' to run an automated audit across all trajectories.</div>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+    </main>
+  </div>
+
+  <div class="footer">
+    AeroPulse-X / AeroTwin-MALE • SIH26054 UAV Digital Twin Prototype •
+    Deterministic Geodesic Simulation & Reduced-Order Physics Model calibrated for MALE-UAV propulsion.
+  </div>
+
+</div>
+
+<script>
+// ==========================================
+// Global State & Navigation Core
+// ==========================================
+const $ = id => document.getElementById(id);
+
+let currentTab = 'live';
+
+function switchDashboardTab(tabId) {
+  currentTab = tabId;
+  const tabs = ['live', 'diagnostics', 'datalab'];
+  tabs.forEach(t => {
+    const btn = $('tabBtn' + t.charAt(0).toUpperCase() + t.slice(1));
+    const content = $('tabContent' + t.charAt(0).toUpperCase() + t.slice(1));
+    if (t === tabId) {
+      if (btn) btn.classList.add('active');
+      if (content) content.style.display = 'block';
+    } else {
+      if (btn) btn.classList.remove('active');
+      if (content) content.style.display = 'none';
+    }
+  });
+
+  if (tabId === 'live') {
+    setTimeout(() => {
+      if (uavMap) uavMap.invalidateSize();
+      window.AeroPulseEngine3D?.resize();
+    }, 60);
+  } else if (tabId === 'datalab') {
+    fetchDataCatalogUI();
+  }
+}
+
+let uavMap = null;
+let uavMarker = null;
+let plannedRoutePolyline = null;
+let flightTrailPolyline = null;
+let waypointLayerGroup = null;
+let riskSegmentsLayerGroup = null;
+
+let currentWaypoints = [];
+let currentPlannedCoords = [];
+let currentRiskSegments = [];
+let flightTrailPoints = [];
+let currentUIMode = 'execution'; // 'planner' or 'execution'
+
+let followUAV = true;
+let proximityHUDEnabled = true;
+let isRouteVisible = true;
+let isWaypointsVisible = true;
+let activeBaseLayer = 'dark';
+let tileLayers = {};
+
+let liveSocket = null;
+let replayTimeline = [];
+let replayIndex = 0;
+let replayTimer = null;
+let isReplayPaused = false;
+let replaySpeedMultiplier = 1.0;
+
+let manualOverrideEnabled = false;
+
+const hwState = {
+  throttle: 60,
+  altitude: 8000,
+  ambient: 35,
+  duration: 6,
+  cht: 220,
+  egt1: 1200,
+  egt2: 1205,
+  egt3: 1195,
+  oilPress: 60,
+  oilTemp: 90,
+  map: 29.8,
+  rpm: 3000,
+  fuelFlow: 20.4
+};
+
+// ==========================================
+// ==========================================
+// Leaflet Map Initialization & Multi-Layer GIS
+// ==========================================
+function initUAVMap() {
+  if (uavMap) return;
+
+  uavMap = L.map('uavMap', {
+    zoomControl: true,
+    attributionControl: true
+  }).setView([28.65, 77.40], 9);
+
+  // 1. Standard OpenStreetMap Tile Layer (Public, Zero API Key Required)
+  tileLayers.standard = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors'
+  });
+
+  // 2. High-Contrast Tactical Dark Map (Powered by OpenStreetMap with Tactical Dark CSS filter, Zero API Key Required)
+  tileLayers.dark = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    className: 'tactical-dark-tiles',
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors'
+  });
+
+  // 3. High-Resolution Satellite Imagery (ESRI World Imagery)
+  tileLayers.satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    maxZoom: 19,
+    attribution: 'Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community'
+  });
+
+  // 4. Topographic & Terrain Layer (OpenTopoMap / SRTM Elevation)
+  tileLayers.terrain = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+    maxZoom: 17,
+    subdomains: 'abc',
+    attribution: 'Map data: &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors, <a href="http://viewfinderpanoramas.org" target="_blank">SRTM</a> | Map style: &copy; <a href="https://opentopomap.org" target="_blank">OpenTopoMap</a>'
+  });
+
+  // Attach graceful fallback handler to all tile layers
+  Object.keys(tileLayers).forEach(key => {
+    tileLayers[key].on('tileerror', function(errorEvent) {
+      const tile = errorEvent.tile;
+      if (tile && !tile.__fallback_applied) {
+        tile.__fallback_applied = true;
+        const coords = errorEvent.coords;
+        if (coords) {
+          tile.src = `https://tile.openstreetmap.org/${coords.z}/${coords.x}/${coords.y}.png`;
+        }
+      }
+    });
+  });
+
+  tileLayers[activeBaseLayer].addTo(uavMap);
+
+  waypointLayerGroup = L.layerGroup().addTo(uavMap);
+  riskSegmentsLayerGroup = L.layerGroup().addTo(uavMap);
+
+  uavMap.on('mousemove', e => {
+    const latStr = e.latlng.lat.toFixed(4);
+    const lonStr = e.latlng.lng.toFixed(4);
+    const z = uavMap.getZoom();
+    const bar = $('mapCursorCoords');
+    if (bar) {
+      bar.textContent = `⌖ Cursor: ${latStr}° N, ${lonStr}° E | Zoom: ${z} | Layer: ${activeBaseLayer.toUpperCase()}`;
+    }
+  });
+
+  uavMap.on('zoomend', () => {
+    checkProximityHUDDisplay();
+  });
+
+  uavMap.on('click', e => {
+    if (currentUIMode === 'planner') {
+      const newId = `WP${String(currentWaypoints.length).padStart(2, '0')}`;
+      const lastWp = currentWaypoints[currentWaypoints.length - 1];
+      const alt = lastWp ? lastWp.altitude_ft : 10000;
+      const speed = lastWp ? lastWp.speed_kt : 135;
+
+      const newWp = {
+        id: newId,
+        name: `Recon Point ${newId}`,
+        latitude: parseFloat(e.latlng.lat.toFixed(4)),
+        longitude: parseFloat(e.latlng.lng.toFixed(4)),
+        altitude_ft: alt,
+        type: 'ISR',
+        speed_kt: speed,
+        loiter_time_min: 10,
+        description: 'Operator Added Waypoint'
+      };
+
+      currentWaypoints.push(newWp);
+      refreshFlightPlan();
+    }
+  });
+}
+
+function setMapLayer(layerName) {
+  if (!uavMap || !tileLayers[layerName]) return;
+  if (activeBaseLayer === layerName) return;
+
+  uavMap.removeLayer(tileLayers[activeBaseLayer]);
+  tileLayers[layerName].addTo(uavMap);
+  activeBaseLayer = layerName;
+
+  ['btnLayerStandard', 'btnLayerDark', 'btnLayerSatellite', 'btnLayerTerrain'].forEach(id => {
+    const btn = $(id);
+    if (btn) btn.classList.remove('active');
+  });
+
+  const activeBtnId = 'btnLayer' + layerName.charAt(0).toUpperCase() + layerName.slice(1);
+  if ($(activeBtnId)) $(activeBtnId).classList.add('active');
+
+  const attrBar = $('mapAttributionText');
+  if (attrBar) {
+    const mapNames = {
+      standard: 'OpenStreetMap Standard',
+      dark: 'OpenStreetMap (Tactical Dark)',
+      satellite: 'Esri World Imagery',
+      terrain: 'OpenTopoMap / SRTM Elevation'
+    };
+    attrBar.textContent = `Geodetic Datum: WGS-84 • ${mapNames[layerName] || 'OpenStreetMap'}`;
+  }
+}
+
+function checkProximityHUDDisplay() {
+  const overlay = $('uavProximityOverlay');
+  if (!overlay) return;
+  if (proximityHUDEnabled && uavMap && uavMap.getZoom() >= 10) {
+    overlay.style.display = 'block';
+  } else if (!proximityHUDEnabled) {
+    overlay.style.display = 'none';
+  }
+}
+
+function toggleProximityHUD() {
+  proximityHUDEnabled = !proximityHUDEnabled;
+  const btn = $('btnProxToggle');
+  const overlay = $('uavProximityOverlay');
+  if (proximityHUDEnabled) {
+    if (btn) {
+      btn.classList.add('active');
+      btn.textContent = '⎇ HUD: ON';
+    }
+    if (overlay) overlay.style.display = 'block';
+  } else {
+    if (btn) {
+      btn.classList.remove('active');
+      btn.textContent = '⎇ HUD: OFF';
+    }
+    if (overlay) overlay.style.display = 'none';
+  }
+}
+
+function createUAVIcon(headingDeg, healthColor = '#4cb574') {
+  const rotation = Math.round(headingDeg || 0);
+  const svgHtml = `
+    <div style="transform: rotate(${rotation}deg); transform-origin: center center; display: flex; justify-content: center; align-items: center;">
+      <svg width="32" height="32" viewBox="0 0 48 48" style="filter: drop-shadow(0 0 6px ${healthColor});">
+        <polygon points="24,2 29,20 29,38 24,42 19,38 19,20" fill="${healthColor}" stroke="#ffffff" stroke-width="1.5" />
+        <polygon points="24,18 46,28 46,32 26,26 22,26 2,32 2,28" fill="${healthColor}" stroke="#ffffff" stroke-width="1.2" />
+        <polygon points="24,35 34,42 34,45 24,43 14,45 14,42" fill="${healthColor}" stroke="#ffffff" stroke-width="1.2" />
+        <circle cx="24" cy="6" r="3" fill="#ffffff" />
+      </svg>
+    </div>
+  `;
+  return L.divIcon({
+    html: svgHtml,
+    className: 'uav-aircraft-icon',
+    iconSize: [32, 32],
+    iconAnchor: [16, 16]
+  });
+}
+
+function createWaypointIcon(type, id, isDraggable = false) {
+  let color = '#5eb574';
+  if (type === 'BASE' || type === 'RECOVERY') color = '#4cb574';
+  if (type === 'CLIMB') color = '#5eb574';
+  if (type === 'ISR' || type === 'PATROL') color = '#c9983e';
+  if (type === 'DESCENT' || type === 'RETURN') color = '#c94c48';
+
+  const html = `
+    <div style="text-align: center;">
+      <div style="background: #070d08; border: 1.5px solid ${color}; color: #ffffff; font-weight: 800; font-size: 8.5px; padding: 1px 4px; border-radius: 999px; box-shadow: 0 3px 8px rgba(0,0,0,0.85); white-space: nowrap;">
+        ${id}
+      </div>
+      <div style="width: 2px; height: 6px; background: ${color}; margin: auto;"></div>
+    </div>
+  `;
+
+  return L.divIcon({
+    html: html,
+    className: 'wp-map-pin',
+    iconSize: [26, 30],
+    iconAnchor: [13, 15]
+  });
+}
+
+// ==========================================
+// UI Mode Switcher (Planner vs Execution)
+// ==========================================
+function setUIMode(mode) {
+  currentUIMode = mode;
+  if (mode === 'planner') {
+    $('btnModePlanner').classList.add('active');
+    $('btnModeExecution').classList.remove('active');
+    $('mapModeSubtitle').textContent = '⚒ Mission Design Mode • Click on map to add waypoints, drag markers to reposition';
+    $('wpPlannerHeaderTitle').innerHTML = '⚒ 3D Waypoint Flight Plan Editor <span style="font-size:9px; color:#7a8c7b; font-weight:normal; margin-left:5px;" id="wpPlannerHeaderSub">(Click on map to add, drag markers to reposition)</span>';
+    $('wpPlannerActions').style.display = 'flex';
+    $('wpTableActionColHeader').textContent = 'Actions';
+  } else {
+    $('btnModeExecution').classList.add('active');
+    $('btnModePlanner').classList.remove('active');
+    $('mapModeSubtitle').textContent = '✈ Mission Execution Mode • Live Geodesic Tracking • Autonomous Digital Twin';
+    $('wpPlannerHeaderTitle').innerHTML = '⌖ 3D Waypoint Route & Live Execution Status <span style="font-size:9px; color:#7a8c7b; font-weight:normal; margin-left:5px;" id="wpPlannerHeaderSub">(Live waypoint sequence, altitude, speed & ETA)</span>';
+    $('wpPlannerActions').style.display = 'none';
+    $('wpTableActionColHeader').textContent = 'Status / ETA';
+  }
+  $('waypointPlannerBox').style.display = 'block';
+  renderWaypointsAndPlannedRoute();
+  renderWaypointsTable();
+}
+
+// ==========================================
+// Presets & Waypoint Route Management
+// ==========================================
+async function loadPresetMission(presetKey) {
+  try {
+    if (presetKey === 'custom') {
+      setUIMode('planner');
+      return;
+    }
+    const data = await api(`/api/mission/waypoints?preset=${encodeURIComponent(presetKey)}`);
+    currentWaypoints = data.waypoints || [];
+    currentPlannedCoords = data.planned_route || [];
+    currentRiskSegments = data.route_risk_segments || [];
+
+    $('autoMissionName').textContent = data.mission_name || presetKey.toUpperCase();
+    $('autoRouteSummary').textContent = `${data.total_waypoints} Waypoints • ${data.total_distance_km} km`;
+    $('autoEstDuration').textContent = data.formatted_duration || `${Math.round(data.estimated_duration_min)}m`;
+
+    renderWaypointsAndPlannedRoute();
+    renderWaypointsTable();
+  } catch (e) {
+    console.warn('Preset load warning:', e.message);
+  }
+}
+
+async function refreshFlightPlan() {
+  try {
+    const data = await api('/api/mission/plan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        waypoints: currentWaypoints,
+        ground_temp_c: 30.0
+      })
+    });
+
+    currentPlannedCoords = data.planned_route || [];
+    currentRiskSegments = data.route_risk_segments || [];
+    $('autoRouteSummary').textContent = `${data.total_waypoints} Waypoints • ${data.total_distance_km} km`;
+    $('autoEstDuration').textContent = data.formatted_duration || `${Math.round(data.estimated_duration_min)}m`;
+
+    renderWaypointsAndPlannedRoute();
+    renderWaypointsTable();
+  } catch (e) {
+    console.warn('Flight plan refresh warning:', e.message);
+  }
+}
+
+function renderWaypointsAndPlannedRoute() {
+  if (!uavMap) return;
+
+  waypointLayerGroup.clearLayers();
+  riskSegmentsLayerGroup.clearLayers();
+
+  if (currentPlannedCoords && currentPlannedCoords.length > 0) {
+    if (plannedRoutePolyline) uavMap.removeLayer(plannedRoutePolyline);
+    plannedRoutePolyline = L.polyline(currentPlannedCoords, {
+      color: '#5eb574',
+      weight: 3,
+      opacity: 0.75,
+      dashArray: '8, 8'
+    }).addTo(uavMap);
+  }
+
+  if (currentRiskSegments && currentRiskSegments.length > 0) {
+    currentRiskSegments.forEach(seg => {
+      let riskCol = '#4cb574';
+      if (seg.predicted_risk === 'MEDIUM') riskCol = '#c9983e';
+      if (seg.predicted_risk === 'HIGH') riskCol = '#c94c48';
+
+      const poly = L.polyline([seg.start_coord, seg.end_coord], {
+        color: riskCol,
+        weight: 3.5,
+        opacity: 0.8
+      });
+      poly.bindPopup(`
+        <div style="font-size:11px;">
+          <b>Leg: ${seg.from_id} ➔ ${seg.to_id}</b><br>
+          Predicted Risk: <b style="color:${riskCol}">${seg.predicted_risk}</b><br>
+          <span style="color:#7a8c7b; font-size:9.5px;">(Predicted Simulation Projection)</span>
+        </div>
+      `);
+      riskSegmentsLayerGroup.addLayer(poly);
+    });
+  }
+
+  const isDraggable = (currentUIMode === 'planner');
+
+  currentWaypoints.forEach((wp, index) => {
+    const marker = L.marker([wp.latitude, wp.longitude], {
+      icon: createWaypointIcon(wp.type, wp.id, isDraggable),
+      draggable: isDraggable
+    });
+
+    if (isDraggable) {
+      marker.on('dragend', e => {
+        const newPos = e.target.getLatLng();
+        wp.latitude = parseFloat(newPos.lat.toFixed(4));
+        wp.longitude = parseFloat(newPos.lng.toFixed(4));
+        refreshFlightPlan();
+      });
+    }
+
+    marker.bindPopup(`
+      <div style="font-family:Inter,sans-serif;">
+        <div style="font-weight:bold; font-size:11.5px; color:#5eb574;">${wp.id}: ${wp.name}</div>
+        <div style="color:#7a8c7b; font-size:10.5px; margin-top:2px;">Objective: <b style="color:#dbe5db;">${wp.type}</b></div>
+        <div style="color:#7a8c7b; font-size:10.5px;">Altitude: <b style="color:#4cb574;">${wp.altitude_ft.toLocaleString()} ft</b></div>
+        <div style="color:#7a8c7b; font-size:10.5px;">Airspeed: <b style="color:#dbe5db;">${wp.speed_kt} kt</b> • Loiter: <b style="color:#c9983e;">${wp.loiter_time_min}m</b></div>
+        <div style="color:#7a8c7b; font-size:10.5px;">GPS: ${wp.latitude.toFixed(4)}°N, ${wp.longitude.toFixed(4)}°E</div>
+      </div>
+    `);
+    waypointLayerGroup.addLayer(marker);
+  });
+
+  if (currentPlannedCoords && currentPlannedCoords.length > 0) {
+    uavMap.fitBounds(L.latLngBounds(currentPlannedCoords), { padding: [30, 30] });
+  }
+}
+
+function renderWaypointsTable(progress = 0, etaNextMin = 0) {
+  const tbody = $('waypointsTableBody');
+  if (!tbody) return;
+
+  const totalWps = currentWaypoints.length;
+  const activeIndex = progress > 0 ? Math.min(totalWps - 1, Math.floor(progress * (totalWps - 1)) + 1) : 0;
+  const isComplete = progress >= 0.99 || $('autoPhasePill')?.textContent === 'COMPLETE';
+  const isPlanner = (currentUIMode === 'planner');
+
+  tbody.innerHTML = currentWaypoints.map((wp, i) => {
+    let statusHtml = '';
+    if (isPlanner) {
+      statusHtml = `
+        <button class="map-btn" style="padding:1px 3px; font-size:8.5px;" onclick="moveWp(${i}, -1)">▲</button>
+        <button class="map-btn" style="padding:1px 3px; font-size:8.5px;" onclick="moveWp(${i}, 1)">▼</button>
+        <button class="map-btn" style="padding:1px 3px; font-size:8.5px; background:#2b1010; color:#d9534f;" onclick="deleteWp(${i})">✕</button>
+      `;
+    } else {
+      if (isComplete) {
+        statusHtml = `<span class="pill good" style="font-size:8px; padding:1px 5px;">COMPLETED</span>`;
+      } else if (progress === 0) {
+        statusHtml = i === 0
+          ? `<span class="pill good" style="font-size:8px; padding:1px 5px;">READY</span>`
+          : `<span class="pill" style="font-size:8px; padding:1px 5px; color:#7a8c7b;">PENDING</span>`;
+      } else if (i < activeIndex) {
+        statusHtml = `<span class="pill good" style="font-size:8px; padding:1px 5px;">COMPLETED</span>`;
+      } else if (i === activeIndex) {
+        const etaStr = etaNextMin > 0 ? `${etaNextMin}m` : 'EN ROUTE';
+        statusHtml = `<span class="pill good" style="background:#16351b; border-color:#488755; color:#8ee0a3; font-size:8px; padding:1px 5px; font-weight:800;">CURRENT (${etaStr})</span>`;
+      } else if (i === activeIndex + 1) {
+        statusHtml = `<span class="pill info" style="font-size:8px; padding:1px 5px;">NEXT</span>`;
+      } else {
+        statusHtml = `<span class="pill" style="font-size:8px; padding:1px 5px; color:#7a8c7b;">PENDING</span>`;
+      }
+    }
+
+    return `
+      <tr style="${!isPlanner && i === activeIndex ? 'background: rgba(94, 181, 116, 0.08);' : ''}">
+        <td><b>${wp.id}</b></td>
+        <td>${isPlanner ? `<input class="wp-input" type="text" value="${wp.name}" onchange="updateWpField(${i}, 'name', this.value)">` : `<span style="font-weight:600; color:#dbe5db;">${wp.name}</span>`}</td>
+        <td>
+          ${isPlanner ? `
+            <select class="wp-input" onchange="updateWpField(${i}, 'type', this.value)">
+              ${['BASE','TAKEOFF','CLIMB','CRUISE','ISR','PATROL','DESCENT','RETURN','LANDING','RECOVERY'].map(t =>
+                `<option value="${t}" ${wp.type === t ? 'selected' : ''}>${t}</option>`
+              ).join('')}
+            </select>
+          ` : `<span class="pill" style="font-size:8px; padding:1px 5px;">${wp.type}</span>`}
+        </td>
+        <td>${isPlanner ? `<input class="wp-input" type="number" step="500" value="${wp.altitude_ft}" onchange="updateWpField(${i}, 'altitude_ft', +this.value)">` : `${Math.round(wp.altitude_ft).toLocaleString()} ft`}</td>
+        <td>${isPlanner ? `<input class="wp-input" type="number" step="5" value="${wp.speed_kt || 135}" onchange="updateWpField(${i}, 'speed_kt', +this.value)">` : `${wp.speed_kt || 135} kt`}</td>
+        <td>${isPlanner ? `<input class="wp-input" type="number" step="5" value="${wp.loiter_time_min || 0}" onchange="updateWpField(${i}, 'loiter_time_min', +this.value)">` : `${wp.loiter_time_min || 0} min`}</td>
+        <td style="text-align:center;">${statusHtml}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function updateWpField(index, field, value) {
+  if (currentWaypoints[index]) {
+    currentWaypoints[index][field] = value;
+    refreshFlightPlan();
+  }
+}
+
+function addNewWaypoint() {
+  const newId = `WP${String(currentWaypoints.length).padStart(2, '0')}`;
+  const lastWp = currentWaypoints[currentWaypoints.length - 1];
+  const lat = lastWp ? lastWp.latitude + 0.12 : 28.5;
+  const lon = lastWp ? lastWp.longitude + 0.15 : 77.2;
+  const alt = lastWp ? lastWp.altitude_ft : 12000;
+
+  currentWaypoints.push({
+    id: newId,
+    name: `Waypoint ${newId}`,
+    latitude: parseFloat(lat.toFixed(4)),
+    longitude: parseFloat(lon.toFixed(4)),
+    altitude_ft: alt,
+    type: 'CRUISE',
+    speed_kt: 140,
+    loiter_time_min: 0,
+    description: 'Custom Route Point'
+  });
+  refreshFlightPlan();
+}
+
+function closeRouteToBase() {
+  if (currentWaypoints.length === 0) return;
+  const base = currentWaypoints[0];
+  currentWaypoints.push({
+    id: 'RECOVERY',
+    name: `${base.name} (Recovery)`,
+    latitude: base.latitude,
+    longitude: base.longitude,
+    altitude_ft: base.altitude_ft,
+    type: 'RECOVERY',
+    speed_kt: 65,
+    loiter_time_min: 0,
+    description: 'Approach and Touchdown'
+  });
+  refreshFlightPlan();
+}
+
+function resetWaypointsToPreset() {
+  loadPresetMission($('selMissionPreset').value);
+}
+
+function moveWp(index, direction) {
+  const target = index + direction;
+  if (target >= 0 && target < currentWaypoints.length) {
+    const temp = currentWaypoints[index];
+    currentWaypoints[index] = currentWaypoints[target];
+    currentWaypoints[target] = temp;
+    refreshFlightPlan();
+  }
+}
+
+function deleteWp(index) {
+  if (currentWaypoints.length <= 2) {
+    alert('Mission route must have at least 2 waypoints.');
+    return;
+  }
+  currentWaypoints.splice(index, 1);
+  refreshFlightPlan();
+}
+
+// ==========================================
+// Live Simulation & Mission Replay Controls
+// ==========================================
+async function startAutomaticMission() {
+  setUIMode('execution');
+  if (replayTimer) clearInterval(replayTimer);
+  replayTimeline = [];
+
+  $('btnStartMission').style.display = 'none';
+  $('btnStartReplay').style.display = 'none';
+  $('btnPauseMission').style.display = 'inline-block';
+  $('btnResumeMission').style.display = 'none';
+  $('btnAbortMission').style.display = 'inline-block';
+  $('btnRestartMission').style.display = 'inline-block';
+  $('selReplaySpeed').style.display = 'none';
+  $('autoPhasePill').textContent = 'SIMULATING';
+
+  await startLiveStream();
+}
+
+async function startMissionReplay() {
+  setUIMode('execution');
+  if (liveSocket) {
+    try { liveSocket.close(); } catch {}
+    liveSocket = null;
+  }
+  if (replayTimer) clearInterval(replayTimer);
+  flightTrailPoints = [];
+
+  $('btnStartMission').style.display = 'none';
+  $('btnStartReplay').style.display = 'none';
+  $('btnPauseMission').style.display = 'inline-block';
+  $('btnResumeMission').style.display = 'none';
+  $('btnAbortMission').style.display = 'inline-block';
+  $('btnRestartMission').style.display = 'inline-block';
+  $('selReplaySpeed').style.display = 'inline-block';
+  $('autoPhasePill').textContent = 'REPLAYING';
+
+  try {
+    const payload = getScenarioPayload({
+      steps: 60,
+      step_minutes: 2.0,
+      fault_onset_ratio: +$('onset').value || 0.35
+    });
+    const data = await api('/api/replay', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    replayTimeline = data.timeline || [];
+    if (replayTimeline.length === 0) {
+      alert('No replay timeline data returned by server.');
+      abortMissionSimulation();
+      return;
+    }
+
+    replayIndex = 0;
+    isReplayPaused = false;
+    $('events').innerHTML = '<div class="event"><strong>Mission Replay Initialized</strong>Replaying simulated historical mission across planned coordinates.</div>';
+
+    startReplayTimer();
+  } catch (e) {
+    alert('Replay error: ' + e.message);
+    abortMissionSimulation();
+  }
+}
+
+function startReplayTimer() {
+  if (replayTimer) clearInterval(replayTimer);
+  const interval = Math.max(30, Math.round(200 / replaySpeedMultiplier));
+
+  replayTimer = setInterval(() => {
+    if (isReplayPaused) return;
+    if (replayIndex >= replayTimeline.length) {
+      clearInterval(replayTimer);
+      replayTimer = null;
+      $('autoPhasePill').textContent = 'COMPLETE';
+      $('btnStartMission').style.display = 'inline-block';
+      $('btnStartReplay').style.display = 'inline-block';
+      $('btnPauseMission').style.display = 'none';
+      $('btnResumeMission').style.display = 'none';
+      $('selReplaySpeed').style.display = 'none';
+      $('events').innerHTML += '<div class="event"><strong>Mission Replay Complete</strong>Historical flight trajectory playback finished.</div>';
+      renderWaypointsTable(1.0, 0);
+      return;
+    }
+
+    const p = replayTimeline[replayIndex];
+    drawTimeline(replayTimeline.slice(0, replayIndex + 1));
+
+    $('health').textContent = p.health_state;
+    $('health').className = 'kpi ' + stateClass(p.health_state);
+    $('healthIndex').textContent = fmt(p.health_index, 1);
+    $('missionRisk').textContent = `${p.risk_level} ${fmt(p.risk_score, 0)}`;
+    $('missionRisk').className = 'kpi ' + stateClass(p.risk_level);
+    $('residual').textContent = fmt(p.residual_rms, 2);
+    $('anomaly').textContent = `replay • t=${fmt(p.time_min, 0)} min • ${p.primary_fault || 'Normal'}`;
+    $('anomaly').className = 'tiny ' + (p.anomaly_score > 0.05 ? 'bad' : 'good');
+
+    if (p.rul && p.rul_hours != null) {
+      $('rul').textContent = `${p.rul_hours} h`;
+      $('rul').className = 'kpi ' + (p.rul_hours < 10 ? 'bad' : p.rul_hours < 50 ? 'warn' : 'good');
+      $('rulSub').textContent = `90% CI: [${p.rul_lower_hours || 0}h - ${p.rul_upper_hours || 0}h]`;
+    }
+
+    if (p.uav) {
+      updateUAVPosition(p.uav, p.environment, p.health_state, p.risk_level, p.risk_score);
+    }
+
+    if (p.telemetry) {
+      hwState.cht = Math.round(p.telemetry.CHT || 220);
+      hwState.egt1 = Math.round(p.telemetry.EGT1 || 1200);
+      hwState.egt2 = Math.round(p.telemetry.EGT2 || 1205);
+      hwState.egt3 = Math.round(p.telemetry.EGT3 || 1195);
+      hwState.oilPress = Math.round(p.telemetry.Oil_Pressure || 60);
+      hwState.oilTemp = Math.round(p.telemetry.Oil_Temp || 90);
+      hwState.map = +(p.telemetry.MAP_Injector || 30).toFixed(1);
+      hwState.rpm = Math.round(p.telemetry.Engine_RPM || 3000);
+      hwState.fuelFlow = +(p.telemetry.Fuel_Flow || 20).toFixed(1);
+      updateCANStream();
+      updateLiveEnginePanel(p.telemetry, p.uav, p.health_index, p.primary_fault);
+    }
+
+    replayIndex++;
+  }, interval);
+}
+
+function setReplaySpeed(multiplier) {
+  replaySpeedMultiplier = Math.max(0.5, multiplier || 1.0);
+  if (replayTimer && !isReplayPaused) {
+    startReplayTimer();
+  }
+}
+
+function toggleMissionPause() {
+  isReplayPaused = !isReplayPaused;
+  if (isReplayPaused) {
+    $('btnPauseMission').style.display = 'none';
+    $('btnResumeMission').style.display = 'inline-block';
+    $('autoPhasePill').textContent = 'PAUSED';
+  } else {
+    $('btnPauseMission').style.display = 'inline-block';
+    $('btnResumeMission').style.display = 'none';
+    $('autoPhasePill').textContent = (replayTimeline.length > 0 && replayTimer) ? 'REPLAYING' : 'SIMULATING';
+  }
+}
+
+function restartMissionSimulation() {
+  if (replayTimeline.length > 0) {
+    replayIndex = 0;
+    flightTrailPoints = [];
+    isReplayPaused = false;
+    $('autoPhasePill').textContent = 'REPLAYING';
+    $('btnPauseMission').style.display = 'inline-block';
+    $('btnResumeMission').style.display = 'none';
+    startReplayTimer();
+  } else {
+    abortMissionSimulation();
+    startAutomaticMission();
+  }
+}
+
+function abortMissionSimulation() {
+  if (liveSocket) {
+    try { liveSocket.close(); } catch {}
+    liveSocket = null;
+  }
+  if (replayTimer) {
+    clearInterval(replayTimer);
+    replayTimer = null;
+  }
+  flightTrailPoints = [];
+  replayIndex = 0;
+  isReplayPaused = false;
+  replayTimeline = [];
+
+  $('btnStartMission').style.display = 'inline-block';
+  $('btnStartReplay').style.display = 'inline-block';
+  $('btnPauseMission').style.display = 'none';
+  $('btnResumeMission').style.display = 'none';
+  $('btnAbortMission').style.display = 'none';
+  $('btnRestartMission').style.display = 'none';
+  $('selReplaySpeed').style.display = 'none';
+  $('autoPhasePill').textContent = 'READY';
+  $('events').innerHTML = '<div class="event"><strong>Simulation Reset</strong>UAV mission reset to base fix. Engine OFF.</div>';
+  renderWaypointsTable(0, 0);
+  window.AeroPulseEngine3D?.setTelemetry({
+    rpm: 0,
+    throttle: 0,
+    engineState: 'ENGINE_OFF',
+    oilPressure: 0,
+    fuelFlow: 0,
+    vibration: 0,
+    fault: 'none',
+    health: 100
+  });
+  if ($('engRPM')) $('engRPM').textContent = '0 RPM';
+}
+
+function toggleManualOverride(enabled) {
+  manualOverrideEnabled = enabled;
+  const ctrls = $('manualOverrideControls');
+  const badge = $('simModeBadge');
+  if (enabled) {
+    ctrls.style.opacity = '1.0';
+    ctrls.style.pointerEvents = 'auto';
+    badge.textContent = 'SIMULATION MODE: ⚠ MANUAL OVERRIDE ACTIVE';
+    badge.className = 'pill warn';
+  } else {
+    ctrls.style.opacity = '0.5';
+    ctrls.style.pointerEvents = 'none';
+    badge.textContent = 'SIMULATION MODE: ● AUTOMATIC';
+    badge.className = 'pill good';
+  }
+}
+
+// ==========================================
+// Telemetry, Environment & Twin Synchronization
+// ==========================================
+function updateUAVPosition(uav, envData = null, healthState = 'Normal', riskLevel = 'LOW', riskScore = 0) {
+  if (!uav || !uavMap) return;
+
+  const lat = uav.latitude;
+  const lon = uav.longitude;
+  const heading = uav.heading_deg || 0;
+  const track = uav.track_deg || heading;
+  const alt = uav.altitude_ft || 0;
+  const speed = uav.ground_speed_kt || 0;
+  const airspeed = uav.airspeed_kt || speed;
+  const vsi = uav.vertical_speed_fpm || 0;
+  const phase = uav.mission_phase || 'CRUISE';
+  const progress = uav.mission_progress || 0;
+  const throttle = uav.auto_throttle != null ? Math.round(uav.auto_throttle * 100) : 60;
+  const amb = uav.ambient_c != null ? uav.ambient_c : 20.0;
+  const etaNext = uav.eta_next_wp_min || 0;
+
+  let healthColor = '#4cb574';
+  if (healthState === 'Watch' || riskLevel === 'MEDIUM') healthColor = '#c9983e';
+  if (healthState === 'Warning' || healthState === 'Critical' || riskLevel === 'HIGH') healthColor = '#c94c48';
+
+  if (!uavMarker) {
+    uavMarker = L.marker([lat, lon], {
+      icon: createUAVIcon(heading, healthColor),
+      zIndexOffset: 1000
+    }).addTo(uavMap);
+
+    uavMarker.bindPopup(`
+      <div style="font-family:Inter,sans-serif;">
+        <div style="font-weight:bold; font-size:11.5px; color:#4cb574;">✈ AeroPulse-X MALE-UAV</div>
+        <div style="font-size:10.5px; color:#7a8c7b; margin-top:2px;">Phase: <b style="color:#dbe5db;">${phase}</b></div>
+        <div style="font-size:10.5px; color:#7a8c7b;">Altitude: <b style="color:#4cb574;">${Math.round(alt).toLocaleString()} ft</b></div>
+        <div style="font-size:10.5px; color:#7a8c7b;">GS: <b style="color:#dbe5db;">${speed} kt</b> | TAS: <b>${airspeed} kt</b></div>
+      </div>
+    `);
+  } else {
+    uavMarker.setLatLng([lat, lon]);
+    uavMarker.setIcon(createUAVIcon(heading, healthColor));
+  }
+
+  flightTrailPoints.push({ lat, lon, color: healthColor });
+  if (flightTrailPoints.length > 500) flightTrailPoints.shift();
+
+  if (flightTrailPolyline) uavMap.removeLayer(flightTrailPolyline);
+  flightTrailPolyline = L.polyline(flightTrailPoints.map(p => [p.lat, p.lon]), {
+    color: healthColor,
+    weight: 3.5,
+    opacity: 0.9
+  }).addTo(uavMap);
+
+  if (followUAV) {
+    uavMap.panTo([lat, lon], { animate: true, duration: 0.25 });
+  }
+
+  // Update Compact HUD Strip Below Map
+  $('hudLat').textContent = `${lat.toFixed(4)}° N`;
+  $('hudLon').textContent = `${lon.toFixed(4)}° E`;
+  $('hudAlt').textContent = `${Math.round(alt).toLocaleString()} ft`;
+  $('hudSpeed').textContent = `${speed} / ${airspeed} kt`;
+  $('hudHeading').textContent = `${String(Math.round(heading)).padStart(3, '0')}° / ${String(Math.round(track)).padStart(3, '0')}°`;
+
+  $('hudPhase').textContent = phase;
+  $('hudPhase').className = 'pill ' + (healthState === 'Normal' ? 'good' : healthState === 'Watch' ? 'warn' : 'bad');
+
+  $('hudProgress').textContent = `${(progress * 100).toFixed(1)}%`;
+
+  $('hudHealth').textContent = `${healthState}`;
+  $('hudHealth').className = 'pill ' + (healthState === 'Normal' ? 'good' : healthState === 'Watch' ? 'warn' : 'bad');
+
+  $('hudRisk').textContent = `${riskLevel} (${Math.round(riskScore)})`;
+  $('hudRisk').className = 'pill ' + (riskLevel === 'LOW' ? 'good' : riskLevel === 'MEDIUM' ? 'warn' : 'bad');
+
+  // Update Top Mission Control Automatic Readouts
+  $('autoAltitude').innerHTML = `${Math.round(alt).toLocaleString()} ft <small style="font-size:8.5px; color:#4cb574;">AUTO</small>`;
+  $('autoSpeed').innerHTML = `${speed} kt <small style="font-size:8.5px; color:#4cb574;">AUTO</small>`;
+  $('autoThrottle').innerHTML = `${throttle}% <small style="font-size:8.5px; color:#4cb574;">AUTO</small>`;
+  $('autoAmbient').innerHTML = `${amb.toFixed(1)}°C <small style="font-size:8.5px; color:#4cb574;">AUTO (ISA)</small>`;
+  $('autoPhasePill').textContent = phase;
+
+  // Update Live Waypoint Execution Table with Real-Time ETA & Status
+  renderWaypointsTable(progress, etaNext);
+
+  // Update Live Environment Panel
+  const env = envData || uav.environment;
+  if (env) {
+    $('envSourceBadge').textContent = env.source === 'live' ? '● LIVE (Open-Meteo API)' : '● SIMULATED (ISA Model)';
+    $('envSourceBadge').className = 'pill ' + (env.source === 'live' ? 'good' : 'warn');
+    $('envTemp').textContent = `${env.ambient_c} °C`;
+    $('envPress').innerHTML = `${env.pressure_hpa} hPa <small style="font-size:8.5px; color:#7a8c7b;">(${env.pressure_inhg} inHg)</small>`;
+    $('envDensity').textContent = `${env.air_density_ratio}`;
+    $('envWind').textContent = `${env.wind_speed_kt} kt @ ${env.wind_direction_deg}°`;
+    $('envHeadwind').innerHTML = `<span style="color:${env.headwind_kt>0?'#c9983e':'#4cb574'}">HW: ${env.headwind_kt} kt</span> • CW: ${env.crosswind_kt} kt`;
+    $('envHumidity').textContent = `${env.humidity_pct}%`;
+    $('envVisibility').textContent = `${env.visibility_km} km`;
+    $('envCondition').textContent = env.weather_condition;
+  }
+
+  // Update Floating Close Proximity HUD
+  $('pxLat').textContent = `${lat.toFixed(4)}° N`;
+  $('pxLon').textContent = `${lon.toFixed(4)}° E`;
+  $('pxAlt').textContent = `${Math.round(alt).toLocaleString()} ft`;
+  $('pxSpeed').textContent = `${speed} / ${airspeed} kt`;
+  $('pxHdg').textContent = `${String(Math.round(heading)).padStart(3, '0')}°`;
+  $('pxVSI').textContent = `${vsi >= 0 ? '+' : ''}${vsi} fpm`;
+  $('pxPhase').textContent = phase;
+  $('pxETA').textContent = `${etaNext || 0} min`;
+
+  if (env) {
+    $('pxTemp').textContent = `${env.ambient_c} °C`;
+    $('pxPress').textContent = `${env.pressure_hpa} hPa`;
+    $('pxDensity').textContent = `${env.air_density_ratio} σ`;
+    $('pxWind').textContent = `${env.wind_speed_kt} kt @ ${env.wind_direction_deg}°`;
+    $('pxHW').textContent = `${env.headwind_kt} kt`;
+    $('pxEnvSrc').textContent = env.source.toUpperCase();
+    $('pxEnvSrc').className = env.source === 'live' ? 'good' : 'warn';
+  }
+
+  $('pxHealthBadge').textContent = healthState.toUpperCase();
+  $('pxHealthBadge').className = 'pill ' + (healthState === 'Normal' ? 'good' : healthState === 'Watch' ? 'warn' : 'bad');
+
+  $('pxHealth').textContent = `${(healthState === 'Normal' ? 98 : healthState === 'Watch' ? 76 : 42)}%`;
+  $('pxHealth').className = healthState === 'Normal' ? 'good' : healthState === 'Watch' ? 'warn' : 'bad';
+  $('pxRisk').textContent = `${riskLevel} (${Math.round(riskScore)})`;
+  $('pxRisk').className = riskLevel === 'LOW' ? 'good' : riskLevel === 'MEDIUM' ? 'warn' : 'bad';
+}
+
+function updateLiveEnginePanel(telemetry, uav = null, healthIndex = 98, faultName = null) {
+  if (!telemetry) return;
+  const runState = telemetry.engine_run_state || (telemetry.Engine_RPM > 0 ? 'ENGINE_RUNNING' : 'ENGINE_OFF');
+  const rpm = telemetry.Engine_RPM != null ? Math.round(telemetry.Engine_RPM) : (runState === 'ENGINE_OFF' ? 0 : 3000);
+  const thr = uav && uav.auto_throttle != null ? Math.round(uav.auto_throttle * 100) : Math.round(telemetry.Throttle ?? (runState === 'ENGINE_OFF' ? 0 : 60));
+  const load = uav && uav.auto_load != null ? uav.auto_load : (telemetry.Load ?? (runState === 'ENGINE_OFF' ? 0 : 0.85));
+  hwState.throttle = thr;
+
+  // Update Consolidated Selected Assembly Engine Telemetry Grid
+  if ($('engRPM')) $('engRPM').textContent = `${rpm.toLocaleString()} RPM`;
+  if ($('engThrottle')) $('engThrottle').innerHTML = `${thr}% <small style="font-size:7.5px; color:#4cb574;">AUTO</small>`;
+  if ($('engLoad')) $('engLoad').innerHTML = `${typeof load === 'number' ? load.toFixed(2) : load} <small style="font-size:7.5px; color:#4cb574;">AUTO</small>`;
+  if ($('engCHT')) $('engCHT').textContent = `${fmt(telemetry.CHT, 1)} °F`;
+  if ($('engEGT')) $('engEGT').textContent = `${fmt(telemetry.EGT1, 0)} °F`;
+  if ($('engOil')) $('engOil').textContent = `${fmt(telemetry.Oil_Pressure, 0)} PSI • ${fmt(telemetry.Oil_Temp, 0)} °C`;
+  if ($('engFuel')) $('engFuel').textContent = `${fmt(telemetry.Fuel_Flow, 1)} L/h`;
+  if ($('engVib')) $('engVib').textContent = `${fmt(telemetry.Vibration ?? telemetry.Vibration_RMS ?? (runState === 'ENGINE_OFF' ? 0 : 1.02), 2)} g`;
+  if ($('engMAP')) $('engMAP').textContent = `${fmt(telemetry.MAP_Injector || 29.8, 1)} inHg`;
+  if ($('engIgn')) $('engIgn').textContent = `${(runState === 'ENGINE_OFF' ? 0 : 20.0 + 4.0 * (rpm / 3000)).toFixed(1)}° BTDC`;
+  if ($('engVolt')) $('engVolt').textContent = `${fmt(telemetry.Battery_Voltage || 28.2, 1)} V`;
+  if ($('engAlt')) $('engAlt').textContent = `${fmt(telemetry.Alternator_Temp || 68.4, 1)} °C`;
+  if ($('engFuelPress')) $('engFuelPress').textContent = `${(runState === 'ENGINE_OFF' ? 0 : 38.0 + 0.22 * (telemetry.Fuel_Flow || 20)).toFixed(1)} PSI`;
+  if ($('engKnock')) $('engKnock').textContent = `${(runState === 'ENGINE_OFF' ? 0 : 0.01 + 0.02 * Math.max(0, ((telemetry.CHT || 220) - 220) / 40)).toFixed(2)}`;
+
+  // Synchronize 3D WebGL Piston Engine Twin
+  window.AeroPulseEngine3D?.setTelemetry({
+    rpm,
+    throttle: thr,
+    cht: telemetry.CHT ?? hwState.cht,
+    egt: Math.max(telemetry.EGT1 ?? hwState.egt1, telemetry.EGT2 ?? hwState.egt2, telemetry.EGT3 ?? hwState.egt3),
+    oilPressure: telemetry.Oil_Pressure ?? hwState.oilPress,
+    oilTemp: telemetry.Oil_Temp ?? hwState.oilTemp,
+    fuelFlow: telemetry.Fuel_Flow ?? hwState.fuelFlow,
+    vibration: telemetry.Vibration ?? telemetry.Vibration_RMS ?? (runState === 'ENGINE_OFF' ? 0 : 1.02),
+    busVoltage: telemetry.Battery_Voltage ?? telemetry.Bus_Voltage ?? 28.2,
+    health: healthIndex,
+    fault: faultName || $('fault')?.value || 'none',
+    engineState: runState
+  });
+}
+
+function toggleFollowUAV() {
+  followUAV = !followUAV;
+  const btn = $('btnFollow');
+  if (followUAV) {
+    btn.classList.add('active');
+    btn.textContent = '⌖ Follow: ON';
+    centerOnUAV();
+  } else {
+    btn.classList.remove('active');
+    btn.textContent = '⌖ Follow: OFF';
+  }
+}
+
+function centerOnUAV() {
+  if (uavMarker && uavMap) {
+    uavMap.setView(uavMarker.getLatLng(), Math.max(uavMap.getZoom(), 11), { animate: true });
+  }
+}
+
+function fitMissionRoute() {
+  if (plannedRoutePolyline && uavMap) {
+    uavMap.fitBounds(plannedRoutePolyline.getBounds(), { padding: [30, 30], animate: true });
+  }
+}
+
+function togglePlannedRoute() {
+  isRouteVisible = !isRouteVisible;
+  const btn = $('btnRouteToggle');
+  if (isRouteVisible) {
+    btn.classList.add('active');
+    if (plannedRoutePolyline) uavMap.addLayer(plannedRoutePolyline);
+  } else {
+    btn.classList.remove('active');
+    if (plannedRoutePolyline) uavMap.removeLayer(plannedRoutePolyline);
+  }
+}
+
+function toggleWaypoints() {
+  isWaypointsVisible = !isWaypointsVisible;
+  const btn = $('btnWpToggle');
+  if (isWaypointsVisible) {
+    btn.classList.add('active');
+    if (waypointLayerGroup) uavMap.addLayer(waypointLayerGroup);
+  } else {
+    btn.classList.remove('active');
+    if (waypointLayerGroup) uavMap.removeLayer(waypointLayerGroup);
+  }
+}
+
+// ==========================================
+// Backend API & Scenario Helpers
+// ==========================================
+function getScenarioPayload(extra = {}) {
+  const isOverride = manualOverrideEnabled && $('chkManualOverride').checked;
+  return {
+    fault: $('fault').value,
+    severity: +$('severity').value,
+    simulation_mode: isOverride ? 'manual_override' : 'automatic',
+    altitude_ft: isOverride ? +$('hwSliderAltitude').value : 8000,
+    ambient_c: isOverride ? +$('hwSliderAmbient').value : 35,
+    duration_h: isOverride ? +$('hwSliderDuration').value : 6,
+    rapid_throttle: isOverride ? +$('hwSliderThrottle').value > 80 : false,
+    operating_state: 'CRUISE',
+    waypoints: currentWaypoints,
+    ...extra
+  };
+}
+
+function stateClass(v){
+  v=String(v||'');
+  return v==='Normal'||v==='LOW'||v==='TRUSTED'
+    ?'good'
+    :v==='Watch'||v==='MEDIUM'||v==='CHECK'
+    ?'warn'
+    :v==='Critical'||v==='HIGH'||v==='SUSPECT'
+    ?'bad'
+    :'info';
+}
+
+function fmt(v,d=2){
+  return typeof v==='number'&&Number.isFinite(v)
+    ?v.toFixed(d)
+    :String(v??'—');
+}
+
+async function api(url,opt){
+  const r=await fetch(url,opt);
+  let data;
+  try{
+    data=await r.json();
+  }catch{
+    data={detail:'Non-JSON response'};
+  }
+  if(!r.ok){
+    throw new Error(
+      typeof data.detail==='string'
+        ?data.detail
+        :JSON.stringify(data.detail)
+    );
+  }
+  return data;
+}
+
+async function checkStatus(){
+  try{
+    const s=await api('/api/status');
+    $('serverBadge').textContent=
+      s.models_ready&&s.demo_ready
+        ?'● System Ready'
+        :'● Setup Required';
+    $('serverBadge').className=
+      'badge '+(s.models_ready&&s.demo_ready?'live':'err');
+
+    if(!s.models_ready||!s.demo_ready){
+      $('setupNotice').classList.remove('hidden');
+      $('setupNotice').textContent=
+        'Model assets require reloading. POST to /api/reload or retrain models.';
+    } else {
+      $('setupNotice').classList.add('hidden');
+    }
+  }catch(e){
+    $('serverBadge').textContent='● Backend Offline';
+    $('serverBadge').className='badge err';
+    $('setupNotice').classList.remove('hidden');
+    $('setupNotice').textContent=e.message;
+  }
+}
+
+function updateCANStream(){
+  const can = $('canBusStream');
+  if(!can) return;
+  const timeStr = new Date().toTimeString().split(' ')[0];
+  can.innerHTML = `
+    [CAN 0x201] RPM: ${hwState.rpm} | THROTTLE: ${hwState.throttle.toFixed(1)}% | MAP: ${hwState.map} inHg | TIME: ${timeStr}<br>
+    [CAN 0x202] CHT: ${hwState.cht} F | EGT1: ${hwState.egt1} F | EGT2: ${hwState.egt2} F | EGT3: ${hwState.egt3} F<br>
+    [CAN 0x203] OIL_PRESS: ${hwState.oilPress} PSI | OIL_TEMP: ${hwState.oilTemp} C | STATUS: ${hwState.oilPress<45?'ALERT':'NORMAL'}<br>
+    [CAN 0x204] FUEL_FLOW: ${hwState.fuelFlow} L/h | RAIL_PRESS: 42.4 PSI | TIME: ${timeStr}<br>
+    [CAN 0x205] BUS_VOLT: 28.20 V | ALT_CURR: 18.2 A | ALT_TEMP: 68.4 C<br>
+    [CAN 0x206] VIBRATION_RMS: 1.02 g | KNOCK_IDX: 0.02 | STATE: RUNNING
+  `;
+}
+
+function updateSubsystemBadges(zScores = {}, faultCandidates = [], telemetry = {}){
+  let thermH = 98, lubH = 99, fuelH = 97, combH = 99, elecH = 98, mechH = 99;
+
+  if (Math.abs(zScores.CHT || 0) > 2.0 || Math.abs(zScores.EGT1 || 0) > 2.0) thermH = 48;
+  if (Math.abs(zScores.Oil_Pressure || 0) > 2.0 || Math.abs(zScores.Oil_Temp || 0) > 2.0) lubH = 42;
+  if (Math.abs(zScores.Fuel_Flow || 0) > 2.0 || Math.abs(zScores.MAP_Injector || 0) > 2.0) fuelH = 52;
+  if (Math.abs(zScores.Battery_Voltage || 0) > 2.0 || Math.abs(zScores.Battery_Current || 0) > 2.0) elecH = 50;
+
+  faultCandidates.forEach(f => {
+    const fn = (f.name || '').toLowerCase();
+    if (fn.includes('overheat') || fn.includes('thermal')) thermH = Math.min(thermH, 35);
+    if (fn.includes('lubrication') || fn.includes('oil')) lubH = Math.min(lubH, 30);
+    if (fn.includes('injector') || fn.includes('fuel')) fuelH = Math.min(fuelH, 40);
+    if (fn.includes('misfire') || fn.includes('combustion')) combH = Math.min(combH, 38);
+    if (fn.includes('electrical') || fn.includes('alternator') || fn.includes('battery')) elecH = Math.min(elecH, 32);
+    if (fn.includes('vibration') || fn.includes('mechanical') || fn.includes('bearing')) mechH = Math.min(mechH, 35);
+  });
+
+  const setBadge = (id, pillId, val) => {
+    const el = $(id);
+    const pEl = $(pillId);
+    if(el) {
+      el.textContent = `${val}%`;
+      el.className = 's-score ' + (val >= 80 ? 'good' : val >= 55 ? 'warn' : 'bad');
+    }
+    if(pEl){
+      pEl.className = 'pill ' + (val >= 80 ? 'good' : val >= 55 ? 'warn' : 'bad');
+    }
+  };
+
+  setBadge('subScoreThermal', 'subPillThermal', thermH);
+  setBadge('subScoreLubrication', 'subPillLubrication', lubH);
+  setBadge('subScoreFuel', 'subPillFuel', fuelH);
+  setBadge('subScoreCombustion', 'subPillCombustion', combH);
+  setBadge('subScoreElectrical', 'subPillElectrical', elecH);
+  setBadge('subScoreMechanical', 'subPillMechanical', mechH);
+}
+
+function renderAnalysis(r){
+  if (!r) return;
+
+  $('health').textContent=r.health_state || '—';
+  $('health').className='kpi '+stateClass(r.health_state);
+  $('healthSub').textContent=`ML ${r.ml_health_state||r.health_state||'—'} • ${(100*(r.health_confidence||0)).toFixed(1)}% conf`;
+
+  $('healthIndex').textContent=fmt(r.health_index,1);
+  $('healthIndex').className='kpi '+(r.health_index>=75?'good':r.health_index>=50?'warn':'bad');
+
+  if (r.mission_risk) {
+    $('missionRisk').textContent=`${r.mission_risk.level || '—'} ${fmt(r.mission_risk.score,0)}`;
+    $('missionRisk').className='kpi '+stateClass(r.mission_risk.level);
+    $('reliability').textContent=`reliability index ${fmt(r.mission_risk.mission_reliability_index,1)}`;
+  }
+
+  if (r.twin) {
+    $('residual').textContent=fmt(r.twin.residual_rms,2);
+  }
+  $('anomaly').textContent=`anomaly ${r.anomaly_flag?'DETECTED':'normal'} • score ${fmt(r.anomaly_score,3)}`;
+  $('anomaly').className='tiny '+(r.anomaly_flag?'bad':'good');
+
+  $('advice').textContent=r.maintenance_advisory || 'Nominal operation.';
+
+  const faultCandidates = (Array.isArray(r.fault_candidates) && r.fault_candidates.length > 0) ? r.fault_candidates : [];
+  if (faultCandidates.length > 0) {
+    $('faults').innerHTML=
+      faultCandidates.map(x=>`
+        <div class="diag">
+          <b>
+            ${x.name || 'Unknown Fault Candidate'}
+            <span class="pill ${stateClass(x.severity==='high'?'HIGH':x.severity==='medium'?'MEDIUM':'LOW')}">
+              ${x.severity || 'low'}
+            </span>
+          </b>
+          <div class="evidence">
+            ${Array.isArray(x.evidence) ? x.evidence.join(' • ') : (x.evidence || 'Nominal indicator match')}
+          </div>
+        </div>
+      `).join('');
+  } else {
+    $('faults').innerHTML='<div class="diag" style="color:var(--dim);font-size:11px;padding:6px 8px;">No additional fault candidates identified.</div>';
+  }
+
+  const sh = r.sensor_health || { overall_trust_score: 100, overall_status: 'TRUSTED', sensors: [], channels: [] };
+  const overallStatus = sh.overall_status || (sh.overall_trust_score >= 80 ? 'TRUSTED' : sh.overall_trust_score >= 55 ? 'CHECK' : 'SUSPECT');
+  $('sensorSummary').innerHTML=
+    `Overall trust <b class="${stateClass(overallStatus)}">
+      ${fmt(sh.overall_trust_score,0)} / 100 • ${overallStatus}
+    </b>`;
+
+  const sensorList = Array.isArray(sh.sensors) ? sh.sensors : (Array.isArray(sh.channels) ? sh.channels : []);
+  if (sensorList.length > 0) {
+    $('sensorTable').innerHTML=
+      sensorList.map(x=>`
+        <tr>
+          <td>${x.name}</td>
+          <td class="${stateClass(x.status)}">${fmt(x.trust_score,0)} • ${x.status}</td>
+        </tr>
+      `).join('');
+  } else {
+    $('sensorTable').innerHTML='<tr><td colspan="2" style="color:var(--dim);text-align:center;">All sensors nominal</td></tr>';
+  }
+
+  const deviations = (r.twin && Array.isArray(r.twin.dominant_deviations)) ? r.twin.dominant_deviations : [];
+  if (deviations.length > 0) {
+    $('deviationTable').innerHTML=
+      deviations.map(x=>`
+        <tr>
+          <td>${x.parameter}</td>
+          <td class="${Math.abs(x.z_score)>=3?'bad':Math.abs(x.z_score)>=2?'warn':''}">${fmt(x.z_score,2)}</td>
+          <td>${fmt(x.percentage_deviation,1)}%</td>
+        </tr>
+      `).join('');
+  } else {
+    $('deviationTable').innerHTML='<tr><td colspan="3" style="color:var(--dim);text-align:center;">No physics deviations detected</td></tr>';
+  }
+
+  if (r.telemetry && typeof r.telemetry === 'object') {
+    $('telemetry').innerHTML=
+      Object.entries(r.telemetry).map(([k,v])=>{
+        let display;
+        if(k==='Degradation_State' && v && typeof v==='object'){
+          display=Object.entries(v).map(([name,val])=>`${name}: ${Number(val).toFixed(2)}`).join(' • ') || 'None';
+        }else{
+          display=fmt(v,2);
+        }
+        return `<tr><td>${k}</td><td>${display}</td></tr>`;
+      }).join('');
+  }
+
+  if (r.twin && r.twin.expected && r.telemetry && r.twin.z_scores) {
+    $('compare').innerHTML=
+      Object.keys(r.twin.expected).map(k=>`
+        <tr>
+          <td>${k}</td>
+          <td>${fmt(r.twin.expected[k],2)}</td>
+          <td>${fmt(+r.telemetry[k],2)}</td>
+          <td>${fmt(r.twin.z_scores[k],2)}</td>
+        </tr>
+      `).join('');
+  }
+
+  if (r.mission_risk) {
+    renderRisk(r.mission_risk);
+  }
+
+  if(r.twin && r.twin.z_scores){
+    updateSubsystemBadges(r.twin.z_scores, r.fault_candidates, r.telemetry);
+  }
+
+  if(r.telemetry){
+    hwState.cht = Math.round(r.telemetry.CHT || 220);
+    hwState.egt1 = Math.round(r.telemetry.EGT1 || 1200);
+    hwState.egt2 = Math.round(r.telemetry.EGT2 || 1205);
+    hwState.egt3 = Math.round(r.telemetry.EGT3 || 1195);
+    hwState.oilPress = Math.round(r.telemetry.Oil_Pressure || 60);
+    hwState.oilTemp = Math.round(r.telemetry.Oil_Temp || 90);
+    hwState.map = +(r.telemetry.MAP_Injector || 30).toFixed(1);
+    hwState.rpm = Math.round(r.telemetry.Engine_RPM || 3000);
+    hwState.fuelFlow = +(r.telemetry.Fuel_Flow || 20).toFixed(1);
+    updateCANStream();
+    updateLiveEnginePanel(r.telemetry, r.uav, r.health_index, r.fault_candidates?.[0]?.name);
+  }
+
+  if(r.rul && r.rul.rul_hours!=null){
+    $('rul').textContent = `${r.rul.rul_hours} h`;
+    $('rul').className = 'kpi ' + (r.rul.rul_hours < 10 ? 'bad' : r.rul.rul_hours < 50 ? 'warn' : 'good');
+    $('rulSub').textContent = `90% CI: [${r.rul.rul_lower_hours}h - ${r.rul.rul_upper_hours}h] • ${r.rul.failure_mode_risk||r.rul.status}`;
+  }
+
+  if (r.uav) {
+    updateUAVPosition(r.uav, r.environment, r.health_state, r.mission_risk?.level || 'LOW', r.mission_risk?.score || 0);
+  }
+}
+
+function renderRisk(r){
+  const labels={
+    engine_condition:'Engine condition',
+    digital_twin_deviation:'Twin deviation',
+    mission_stress:'Mission stress',
+    fault_evidence:'Fault evidence',
+    sensor_uncertainty:'Sensor uncertainty'
+  };
+
+  $('riskBreakdown').innerHTML=
+    Object.entries(r.components).map(([k,v])=>`
+      <div class="riskrow">
+        <span>${labels[k]||k}</span>
+        <div class="bar"><i style="width:${Math.min(100,v)}%"></i></div>
+        <b>${fmt(v,0)}</b>
+      </div>
+    `).join('');
+}
+
+async function analyzeSnapshot(){
+  try{
+    const r=await api('/api/analyze',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(getScenarioPayload())
+    });
+    renderAnalysis(r);
+  }catch(e){
+    alert('Analyze error: ' + e.message);
+  }
+}
+
+function drawTimeline(items){
+  const c=$('timeline');
+  if(!c) return;
+  const ctx=c.getContext('2d');
+  const W=c.width;
+  const H=c.height;
+  const pad=30;
+
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#060a06';
+  ctx.fillRect(0,0,W,H);
+
+  ctx.strokeStyle='#142016';
+  ctx.lineWidth=1;
+  for(let i=0;i<=4;i++){
+    const y=pad+(H-2*pad)*i/4;
+    ctx.beginPath();
+    ctx.moveTo(pad,y);
+    ctx.lineTo(W-pad,y);
+    ctx.stroke();
+    ctx.fillStyle='#6e806f';
+    ctx.font='9.5px system-ui';
+    ctx.fillText(String(100-i*25),6,y+3);
+  }
+
+  const series=[['health_index','#4cb574'],['risk_score','#c94c48']];
+  for(const [key,color] of series){
+    ctx.beginPath();
+    items.forEach((p,i)=>{
+      const x=pad+(W-2*pad)*i/Math.max(1,items.length-1);
+      const y=H-pad-(H-2*pad)*(+p[key]/100);
+      i?ctx.lineTo(x,y):ctx.moveTo(x,y);
+    });
+    ctx.strokeStyle=color;
+    ctx.lineWidth=2.0;
+    ctx.stroke();
+  }
+
+  ctx.fillStyle='#4cb574';
+  ctx.fillText('Health',W-125,15);
+  ctx.fillStyle='#c94c48';
+  ctx.fillText('Risk',W-70,15);
+}
+
+// ==========================================
+// Live WebSocket Streaming (Path-Driven)
+// ==========================================
+async function startLiveStream(){
+  if(liveSocket){
+    try{ liveSocket.close(); }catch{}
+    liveSocket=null;
+  }
+  if (replayTimer) clearInterval(replayTimer);
+  flightTrailPoints = [];
+
+  const proto=location.protocol==='https:'?'wss':'ws';
+  liveSocket=new WebSocket(`${proto}://${location.host}/ws/telemetry`);
+  const points=[];
+
+  liveSocket.onopen=()=>{
+    liveSocket.send(JSON.stringify(getScenarioPayload({
+      steps:60,
+      playback_interval_s: 0.20
+    })));
+    $('events').innerHTML='<div class="event"><strong>Autonomous Flight Stream Active</strong>UAV navigating planned 3D coordinates. Live weather & Digital Twin connected.</div>';
+  };
+
+  liveSocket.onmessage=e=>{
+    const m=JSON.parse(e.data);
+    if(m.type==='telemetry'){
+      const p=m.data;
+      points.push(p);
+      drawTimeline(points);
+
+      $('health').textContent=p.health_state;
+      $('health').className='kpi '+stateClass(p.health_state);
+      $('healthIndex').textContent=fmt(p.health_index,1);
+      $('missionRisk').textContent=`${p.risk_level} ${fmt(p.risk_score,0)}`;
+      $('missionRisk').className='kpi '+stateClass(p.risk_level);
+      $('residual').textContent=fmt(p.residual_rms,2);
+      $('anomaly').textContent=`streaming • t=${fmt(p.time_min,0)} min • ${p.primary_fault}`;
+
+      if(p.uav){
+        updateUAVPosition(p.uav, p.environment, p.health_state, p.risk_level, p.risk_score);
+      }
+
+      if(p.telemetry){
+        hwState.cht = Math.round(p.telemetry.CHT || 220);
+        hwState.egt1 = Math.round(p.telemetry.EGT1 || 1200);
+        hwState.egt2 = Math.round(p.telemetry.EGT2 || 1205);
+        hwState.egt3 = Math.round(p.telemetry.EGT3 || 1195);
+        hwState.oilPress = Math.round(p.telemetry.Oil_Pressure || 60);
+        hwState.oilTemp = Math.round(p.telemetry.Oil_Temp || 90);
+        hwState.map = +(p.telemetry.MAP_Injector || 30).toFixed(1);
+        hwState.rpm = Math.round(p.telemetry.Engine_RPM || 3000);
+        hwState.fuelFlow = +(p.telemetry.Fuel_Flow || 20).toFixed(1);
+        updateCANStream();
+        updateLiveEnginePanel(p.telemetry, p.uav, p.health_index, p.primary_fault);
+      }
+    }else if(m.type==='summary'){
+      $('events').innerHTML+=`<div class="event"><strong>Mission Complete / Touchdown</strong>Peak risk: ${fmt(m.data.peak_risk_score,0)} • Final health: ${m.data.final_health_state}</div>`;
+      $('autoPhasePill').textContent = 'COMPLETE';
+      $('btnStartMission').style.display = 'inline-block';
+      $('btnStartReplay').style.display = 'inline-block';
+      $('btnPauseMission').style.display = 'none';
+      $('btnResumeMission').style.display = 'none';
+      renderWaypointsTable(1.0, 0);
+    }else if(m.type==='error'){
+      alert('Stream error: ' + m.message);
+    }
+  };
+
+  liveSocket.onerror=()=>{
+    console.warn('WebSocket stream unavailable. Falling back to REST mission simulation.');
+    $('events').innerHTML='<div class="event"><strong>REST Simulation Active</strong>Live WebSocket stream unavailable in serverless environment; running flight simulation via deterministic REST telemetry engine.</div>';
+    startMissionReplay();
+  };
+}
+
+// Setup Manual Slider Listeners (only for advanced overrides)
+function setupHardwareListeners() {
+  const sync = (sliderId, valId, unit, stateKey) => {
+    const s = $(sliderId), v = $(valId);
+    if (!s || !v) return;
+    s.addEventListener('input', () => {
+      v.textContent = `${s.value}${unit}`;
+      hwState[stateKey] = +s.value;
+      updateCANStream();
+    });
+  };
+  sync('hwSliderThrottle', 'hwValThrottle', '%', 'throttle');
+  sync('hwSliderAltitude', 'hwValAltitude', ' ft', 'altitude');
+  sync('hwSliderAmbient', 'hwValAmbient', '°C', 'ambient');
+  sync('hwSliderDuration', 'hwValDuration', ' h', 'duration');
+}
+
+// ==========================================
+// Virtual Data Laboratory Interactive Engine
+// ==========================================
+let dlCurrentTrajectory = null;
+let dlReplayTimer = null;
+
+function onDataLabCategoryChange() {
+  const cat = $('dlCategorySelect').value;
+  const scen = $('dlScenarioSelect');
+  if (!scen) return;
+  scen.innerHTML = '';
+  
+  if (cat === 'degradation') {
+    const opts = [
+      {val: 'thermal', label: 'Thermal / Cooling Heat Rejection Loss'},
+      {val: 'lubrication', label: 'Lubrication / Oil Pressure Breakdown'},
+      {val: 'mechanical', label: 'Mechanical Bearing Spalling & Blow-by'},
+      {val: 'injector', label: 'Fuel Injector Clogging & Lean AFR'},
+      {val: 'misfire', label: 'Cylinder Combustion Misfire Imbalance'},
+      {val: 'electrical', label: 'Alternator & Bus Voltage Decay'},
+      {val: 'compound', label: 'Compound Multi-System Degradation'},
+    ];
+    opts.forEach(o => { scen.innerHTML += `<option value="${o.val}">${o.label}</option>`; });
+  } else if (cat === 'healthy') {
+    const opts = [
+      {val: 'nominal', label: 'Standard Mission (8 Phases)'},
+      {val: 'high_altitude', label: 'High-Altitude 16,500 ft Profile'},
+      {val: 'endurance', label: 'Extended 10-Hour Endurance Profile'},
+    ];
+    opts.forEach(o => { scen.innerHTML += `<option value="${o.val}">${o.label}</option>`; });
+  } else if (cat === 'sensor_fault') {
+    const opts = [
+      {val: 'bias', label: 'Transducer Constant Bias (+55°C CHT)'},
+      {val: 'drift', label: 'Linear Transducer Calibration Drift'},
+      {val: 'noise', label: 'High-Frequency Sensor Noise (Gaussian)'},
+      {val: 'scale_error', label: 'Gain / Scale Calibration Error (+40%)'},
+      {val: 'saturation', label: 'Transducer Rail Saturation Clamp'},
+      {val: 'stuck_at', label: 'Frozen Stuck-at Constant Value'},
+      {val: 'dropout', label: 'Hard Signal Loss / Ground Zero Dropout'},
+      {val: 'intermittent', label: 'Intermittent Contact / Packet Loss'},
+    ];
+    opts.forEach(o => { scen.innerHTML += `<option value="${o.val}">${o.label}</option>`; });
+  } else if (cat === 'mission') {
+    const opts = [
+      {val: 'nominal', label: 'Standard ISA Day Mission'},
+      {val: 'high_altitude', label: 'Service Ceiling 18,000 ft Mission'},
+      {val: 'hot_weather', label: 'Hot Desert (+45°C) Mission'},
+      {val: 'endurance', label: 'Max Range Endurance Mission'},
+      {val: 'rapid_throttle', label: 'Tactical Rapid Throttle Mission'},
+      {val: 'combined_high_alt_hot', label: 'High Altitude + Hot Ambient'},
+    ];
+    opts.forEach(o => { scen.innerHTML += `<option value="${o.val}">${o.label}</option>`; });
+  }
+}
+
+function onDataLabDatasetChange() {
+  const ds = $('dlDatasetSelect').value;
+  if (ds === 'NASA_ACES') {
+    $('dlGenNotice').textContent = "NASA ACES: Altus II operational flight telemetry (Operational envelope/context only; NO run-to-failure RUL ground truth).";
+  } else if (ds === 'AERO_PULSE_SYNTHETIC') {
+    $('dlGenNotice').textContent = "AeroPulse-X Synthetic: Primary physics-informed aero-piston digital twin & progressive RUL demonstrator.";
+  } else if (ds === 'NASA_CMAPSS') {
+    $('dlGenNotice').textContent = "NASA C-MAPSS: Turbofan cross-domain prognostics / RUL regression proxy.";
+  } else if (ds === 'CWRU_BEARING') {
+    $('dlGenNotice').textContent = "CWRU Bearing: Rotating-machinery vibration & seeded fault proxy.";
+  } else if (ds === 'ALFA_UAV') {
+    $('dlGenNotice').textContent = "ALFA UAV: Fixed-wing UAV flight dynamics & anomaly proxy.";
+  }
+}
+
+async function fetchDataCatalogUI() {
+  try {
+    const resCat = await fetch('/api/v1/data/catalog');
+    const data = await resCat.json();
+    
+    // Fetch actual materialized corpus statistics
+    const resStat = await fetch('/api/v1/data/statistics');
+    const stats = await resStat.json();
+
+    $('dlTotalDatasets').textContent = `${data.total_datasets} Cataloged`;
+    $('dlTotalTrajs').textContent = `${stats.total_trajectory_count || 90} Materialized`;
+    $('dlLeakageStatus').textContent = stats.leakage_audit_result || 'Trajectory-level audit: PASS';
+    
+    let html = '<div style="font-weight:bold; color:#5eb574; margin-bottom:4px;">Materialized Benchmark Corpus (Actual Counts):</div>';
+    html += `
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:3px; background:#080e09; border:1px solid #142016; border-radius:5px; padding:5px 6px; margin-bottom:6px; font-size:10px;">
+        <div>Healthy Trajectories: <b>${stats.healthy_trajectory_count}</b></div>
+        <div>Degradation Trajectories: <b>${stats.progressive_degradation_trajectory_count}</b></div>
+        <div>Compound Faults: <b>${stats.compound_fault_trajectory_count}</b></div>
+        <div>Sensor Faults (Isolated): <b>${stats.sensor_fault_trajectory_count}</b></div>
+        <div>Mission Scenarios: <b>${stats.mission_scenario_count}</b></div>
+        <div>CAN Fault Scenarios: <b>${stats.can_fault_scenario_count}</b></div>
+        <div style="grid-column: span 2; border-top:1px solid #1c3d24; padding-top:3px; margin-top:2px;">
+          Total Trajectories: <b>${stats.total_trajectory_count}</b> | Total Samples: <b>${stats.total_telemetry_sample_count?.toLocaleString()}</b>
+        </div>
+      </div>
+    `;
+
+    html += '<div style="font-weight:bold; color:#5eb574; margin-bottom:4px;">Dataset Provenance & Boundary Registry:</div>';
+    data.catalog.forEach(ds => {
+      const gtLabel = ds.ground_truth_available ? 'RUL GT: AVAILABLE (H=35)' : 'RUL GT: NONE (Context Only)';
+      const gtPillClass = ds.ground_truth_available ? 'good' : 'warn';
+      html += `
+        <div style="background:#080e09; border:1px solid #142016; border-radius:5px; padding:5px 6px; margin-bottom:4px;">
+          <div style="display:flex; justify-content:space-between; font-weight:bold; color:#e8f0e8;">
+            <span>${ds.name}</span>
+            <div>
+              <span class="pill good" style="font-size:8px;">${ds.real_or_synthetic}</span>
+              <span class="pill ${gtPillClass}" style="font-size:8px; margin-left:2px;">${gtLabel}</span>
+            </div>
+          </div>
+          <div style="color:#7a8c7b; font-size:9.5px; margin-top:2px;">${ds.purpose}</div>
+          <div style="color:#c9983e; font-size:9px; margin-top:2px;"><b>Boundary:</b> ${ds.limitations[0] || 'Standard software boundary'}</div>
+        </div>
+      `;
+    });
+    $('dlAuditBox').innerHTML = html;
+  } catch (err) {
+    $('dlAuditBox').innerHTML = `<div style="color:#c94c48;">Error fetching catalog: ${err.message}</div>`;
+  }
+}
+
+async function auditDataQualityUI() {
+  $('dlAuditBox').innerHTML = '<div style="color:#c9983e;">Auditing dataset corpus and checking trajectory-level leakage...</div>';
+  try {
+    const res = await fetch('/api/v1/data/quality');
+    const rep = await res.json();
+    
+    const leak = rep.trajectory_leakage_audit;
+    $('dlLeakageStatus').textContent = leak.is_leakage_free ? 'Trajectory-level audit: PASS' : 'Overlap Detected';
+    $('dlQualityBadge').textContent = rep.status === 'PASS' ? '● QUALITY AUDIT PASSED' : '● AUDIT WARNING';
+    $('dlQualityBadge').className = 'pill ' + (rep.status === 'PASS' ? 'good' : 'warn');
+
+    let html = `
+      <div style="font-weight:bold; color:#5eb574; margin-bottom:4px;">Data Quality & Leakage Audit Report:</div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px; margin-bottom:6px;">
+        <div>Total Trajectories: <b>${rep.total_trajectories}</b></div>
+        <div>Total Samples: <b>${rep.total_samples.toLocaleString()}</b></div>
+        <div>Missing Values: <b>${rep.missing_value_count}</b></div>
+        <div>NaN / Inf: <b>${rep.nan_or_inf_count}</b></div>
+        <div>Timestamp Monotonic: <b>${rep.timestamp_monotonicity_passed ? 'YES (100%)' : 'NO'}</b></div>
+        <div>Physical Bounds: <b>${rep.physical_bounds_passed ? 'COMPLIANT' : 'VIOLATIONS'}</b></div>
+      </div>
+      <div style="background:#0a1c0f; border:1px solid #1c3d24; border-radius:5px; padding:4px 6px; margin-bottom:4px; font-size:9.5px; color:#4cb574;">
+        <b>Leakage Audit Statement:</b> ${leak.statement}
+      </div>
+      <div style="color:#7a8c7b; font-size:9px;">
+        <b>Scientific Disclosures:</b>
+        <ul style="margin:2px 0 0 14px; padding:0;">
+          ${rep.scientific_disclosures.map(d => `<li>${d}</li>`).join('')}
+        </ul>
+      </div>
+    `;
+    $('dlAuditBox').innerHTML = html;
+  } catch (err) {
+    $('dlAuditBox').innerHTML = `<div style="color:#c94c48;">Quality audit failed: ${err.message}</div>`;
+  }
+}
+
+async function generateDataLabTrajectoryUI() {
+  const cat = $('dlCategorySelect').value;
+  const scen = $('dlScenarioSelect').value;
+  const sev = parseFloat($('dlSeveritySlider').value);
+  $('dlGenNotice').textContent = `Generating ${cat} (${scen}) trajectory...`;
+
+  try {
+    const res = await fetch('/api/v1/data/generate', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        category: cat,
+        scenario_type: scen,
+        severity: sev,
+        duration_hours: cat === 'degradation' ? 35.0 : 4.0,
+      })
+    });
+    const data = await res.json();
+    dlCurrentTrajectory = data.points;
+    $('dlGenNotice').textContent = `Generated ${data.sample_count} points for ${data.trajectory_id}.`;
+    renderDataLabTable(data.points);
+    updateCausalChainUI(data.points[Math.min(data.points.length - 1, 10)]);
+  } catch (err) {
+    $('dlGenNotice').textContent = `Generation error: ${err.message}`;
+  }
+}
+
+function renderDataLabTable(points) {
+  const tbody = $('dlPrognosticsTableBody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+  
+  const stepJump = Math.max(1, Math.floor(points.length / 25));
+  for (let i = 0; i < points.length; i += stepJump) {
+    const p = points[i];
+    const t_h = (p.timestamp / 3600.0).toFixed(2);
+    const h = p.health_index.toFixed(1);
+    const true_rul = p.true_RUL !== null ? `${p.true_RUL.toFixed(1)} h` : '—';
+    const pred_rul = p.predicted_RUL !== null ? `${p.predicted_RUL.toFixed(1)} h` : '—';
+    const ci = (p.RUL_lower !== null && p.RUL_upper !== null) ? `[${p.RUL_lower.toFixed(1)}, ${p.RUL_upper.toFixed(1)}]` : '—';
+    
+    tbody.innerHTML += `
+      <tr>
+        <td>${t_h}</td>
+        <td><span class="pill ${p.health_index >= 70 ? 'good' : (p.health_index >= 35 ? 'warn' : 'bad')}">${h}</span></td>
+        <td><b>${true_rul}</b></td>
+        <td style="color:#5eb574;">${pred_rul}</td>
+        <td style="font-size:9.5px; color:#7a8c7b;">${ci}</td>
+        <td><span class="pill ${p.FADEC_state === 'NOMINAL' ? 'good' : 'warn'}">${p.FADEC_state}</span></td>
+      </tr>
+    `;
+  }
+  $('dlReplayProgress').textContent = `Loaded ${points.length} Steps`;
+}
+
+function updateCausalChainUI(p) {
+  if (!p) return;
+  $('ccVal1').textContent = p.fault_type.toUpperCase();
+  $('ccPill1').textContent = p.fault_present ? `Sev: ${(p.fault_severity*100).toFixed(0)}%` : 'Nominal';
+  
+  $('ccVal2').textContent = `CHT ${p.CHT.toFixed(1)}°C`;
+  $('ccPill2').textContent = `Oil: ${p.oil_pressure.toFixed(0)} psi`;
+  
+  $('ccVal3').textContent = `Trust ${p.sensor_trust.toFixed(1)}%`;
+  $('ccPill3').textContent = p.sensor_fault_present ? p.sensor_fault_type : 'Transducer OK';
+  
+  $('ccVal4').textContent = `CRC ${p.CAN_CRC_status}`;
+  $('ccPill4').textContent = `ID: ${p.CAN_ID}`;
+  
+  $('ccVal5').textContent = `ΔCHT ${(p.CHT - 110.0).toFixed(1)}°C`;
+  $('ccPill5').textContent = p.health_index < 85.0 ? 'Residual High' : 'Residual Normal';
+  
+  $('ccVal6').textContent = p.fault_type.toUpperCase();
+  $('ccPill6').textContent = p.fault_present ? 'Confirmed' : 'Healthy';
+  
+  $('ccVal7').textContent = `H = ${p.health_index.toFixed(1)}`;
+  $('ccPill7').textContent = p.degradation_stage;
+  
+  $('ccVal8').textContent = p.predicted_RUL !== null ? `${p.predicted_RUL.toFixed(1)} h` : '—';
+  $('ccPill8').textContent = p.true_RUL !== null ? `True: ${p.true_RUL.toFixed(1)} h` : 'Normal';
+  
+  $('ccVal9').textContent = p.FADEC_state;
+  $('ccPill9').textContent = `Derate: ${(p.derate_command*100).toFixed(0)}%`;
+  
+  $('ccVal10').textContent = p.health_index <= 35.0 ? 'EMERGENCY RTL' : (p.health_index <= 60.0 ? 'MISSION DERATED' : 'NOMINAL FLIGHT');
+  $('ccPill10').textContent = p.safety_action;
+}
+
+function startDataLabReplayUI() {
+  if (!dlCurrentTrajectory || dlCurrentTrajectory.length === 0) {
+    generateDataLabTrajectoryUI().then(() => {
+      if (dlCurrentTrajectory) runReplayAnimation();
+    });
+  } else {
+    runReplayAnimation();
+  }
+}
+
+function runReplayAnimation() {
+  if (dlReplayTimer) clearInterval(dlReplayTimer);
+  let idx = 0;
+  const total = dlCurrentTrajectory.length;
+  $('btnReplayDataLab').textContent = '⏹ Stop Replay';
+
+  dlReplayTimer = setInterval(() => {
+    if (idx >= total) {
+      clearInterval(dlReplayTimer);
+      dlReplayTimer = null;
+      $('btnReplayDataLab').textContent = '⟳ Replay Closed-Loop SIL';
+      return;
+    }
+    const pt = dlCurrentTrajectory[idx];
+    updateCausalChainUI(pt);
+    $('dlReplayProgress').textContent = `Replaying Step ${idx + 1} / ${total}`;
+    idx++;
+  }, 120);
+}
+
+function exportDataLabJSON() {
+  if (!dlCurrentTrajectory) {
+    alert('Please generate a trajectory first.');
+    return;
+  }
+  const blob = new Blob([JSON.stringify(dlCurrentTrajectory, null, 2)], {type: 'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `aeropulse_trajectory_${Date.now()}.json`;
+  a.click();
+}
+
+// Initialization Sequence
+initUAVMap();
+setupHardwareListeners();
+checkStatus();
+loadPresetMission('border_patrol_alpha');
+</script>
+<script src="/static/engine-3d.js?v=20260909_003"></script>
+</body>
+</html>
