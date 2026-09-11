@@ -1718,17 +1718,29 @@ async def telemetry_stream(
         except Exception:
             pass
 
-# Automatically mirror all /api/ endpoints to / for serverless routing flexibility
-@app.on_event("startup")
-def _mirror_api_routes():
+# Automatically register all routes under both /api/... and /... for universal compatibility
+def _register_dual_routes():
     for route in list(app.routes):
-        if hasattr(route, "path") and route.path.startswith("/api/"):
-            alt_path = route.path[4:]
-            existing = [r.path for r in app.routes if hasattr(r, "path")]
-            if alt_path not in existing:
-                app.add_api_route(
-                    alt_path,
-                    route.endpoint,
-                    methods=route.methods,
-                    response_model=getattr(route, "response_model", None),
-                )
+        if hasattr(route, "path") and hasattr(route, "endpoint") and hasattr(route, "methods"):
+            if route.path.startswith("/api/"):
+                alt_path = route.path[4:]
+                existing = [r.path for r in app.routes if hasattr(r, "path")]
+                if alt_path and alt_path not in existing:
+                    app.add_api_route(
+                        alt_path,
+                        route.endpoint,
+                        methods=route.methods,
+                        response_model=getattr(route, "response_model", None),
+                    )
+            elif not route.path.startswith("/api/") and route.path != "/":
+                alt_path = "/api" + route.path
+                existing = [r.path for r in app.routes if hasattr(r, "path")]
+                if alt_path not in existing:
+                    app.add_api_route(
+                        alt_path,
+                        route.endpoint,
+                        methods=route.methods,
+                        response_model=getattr(route, "response_model", None),
+                    )
+
+_register_dual_routes()
