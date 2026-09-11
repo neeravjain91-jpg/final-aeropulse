@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Optional
 
 import pandas as pd
 import numpy as np
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -452,6 +452,19 @@ def home():
     if index_file.exists():
         return index_file.read_text(encoding="utf-8")
     return HTMLResponse("<h1>AeroPulse-X Digital Twin</h1><p>Application loading...</p>")
+
+
+@app.get("/api/debug")
+@app.get("/debug")
+def debug(request: Request):
+    return {
+        "url": str(request.url),
+        "path": request.url.path,
+        "query_params": dict(request.query_params),
+        "headers": dict(request.headers),
+        "scope_path": request.scope.get("path"),
+        "scope_query_string": str(request.scope.get("query_string")),
+    }
 
 
 @app.get("/api/status")
