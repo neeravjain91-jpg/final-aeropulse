@@ -101,6 +101,57 @@ class DataQualityValidator:
             "status": "PASS" if (nan_inf_count == 0 and dup_ts_count == 0 and ts_monotonic and len(bound_violations) == 0) else "WARNING",
         }
 
+
+    @staticmethod
+    def _validate_causal_coupling(
+        corpus: Dict[str, List[CanonicalTelemetryPoint]],
+    ) -> bool:
+        """Check that physical-fault trajectories exhibit observable coupled response.
+
+        This is intentionally conservative: it validates monotonic directional
+        response for the fault classes represented by the synthetic generator,
+        rather than claiming causal identification from observational data.
+        """
+        checks = 0
+        passed = 0
+        for tid, pts in corpus.items():
+            if not pts:
+                continue
+            fault = str(getattr(pts[0], "fault_type", "") or "").lower()
+            if fault in {"none", "sensor_drift", "sensor_bias", "sensor_spike"}:
+                continue
+            sev = [float(getattr(p, "degradation_severity", 0.0) or 0.0) for p in pts]
+            if max(sev, default=0.0) <= 0.0:
+                continue
+            checks += 1
+            # Compare the first and last quartile averages to avoid treating
+            # point noise as evidence of physical coupling.
+            n = len(pts)
+            q = max(1, n // 4)
+            first = pts[:q]
+            last = pts[-q:]
+            def avg(group, attr):
+                vals = [getattr(p, attr, None) for p in group]
+                vals = [float(v) for v in vals if v is not None and math.isfinite(float(v))]
+                return sum(vals) / len(vals) if vals else None
+            if fault == "overheating":
+                f, l = avg(first, "cht"), avg(last, "cht")
+                ok = f is not None and l is not None and l > f
+            elif fault == "lubrication":
+                f, l = avg(first, "oil_pressure"), avg(last, "oil_pressure")
+                ok = f is not None and l is not None and l < f
+            elif fault == "misfire":
+                f, l = avg(first, "egt1"), avg(last, "egt1")
+                ok = f is not None and l is not None and l < f
+            elif fault == "injector":
+                f, l = avg(first, "fuel_flow"), avg(last, "fuel_flow")
+                ok = f is not None and l is not None and l < f
+            else:
+                # Unknown physical fault types are not silently declared valid.
+                ok = False
+            passed += int(ok)
+        return checks == 0 or passed == checks
+
     @classmethod
     def audit_corpus(
         cls,
@@ -188,7 +239,7 @@ class DataQualityValidator:
             timestamp_monotonicity_passed=all_ts_monotonic,
             physical_bounds_passed=all_bounds_passed,
             physical_bound_violations=all_violations[:10],
-            causal_coupling_passed=True,
+            causal_coupling_passed=cls._validate_causal_coupling(corpus),
             sensor_vs_engine_separation_passed=sensor_separation_passed,
             rul_ground_truth_passed=all_rul_passed,
             trajectory_leakage_audit=leakage_audit,
