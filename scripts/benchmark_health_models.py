@@ -134,6 +134,70 @@ def critical_metrics(y_true, pred) -> dict:
     }
 
 
+
+def engineer_temporal_physics_features(df: pd.DataFrame, train: pd.DataFrame, test: pd.DataFrame, base_features: list[str]) -> tuple[pd.DataFrame, pd.DataFrame, list[str]]:
+    """Add leakage-safe temporal derivatives and train-only healthy-reference residuals.
+
+    Temporal features are computed within Flight using prior/current rows only.
+    Physics residuals are standardized against Normal samples from the training
+    flights only, grouped by Operating_State where possible. No target-derived
+    fields are used.
+    """
+    work = df.copy()
+    numeric = [f for f in base_features if f != "Operating_State" and f in work.columns]
+    if "Flight" not in work.columns:
+        raise ValueError("Flight is required for temporal feature engineering.")
+
+    # Preserve dataset order within each flight; ACES telemetry is sequential.
+    temporal_names: list[str] = []
+    for col in numeric:
+        g = work.groupby("Flight", sort=False)[col]
+        prev = g.shift(1)
+        delta = work[col] - prev
+        name = f"d_{col}"
+        work[name] = delta.replace([np.inf, -np.inf], np.nan)
+        temporal_names.append(name)
+        # Short causal trend: current value minus 5-sample causal mean.
+        causal_mean = g.transform(lambda s: s.shift(1).rolling(5, min_periods=2).mean())
+        trend_name = f"trend5_{col}"
+        work[trend_name] = (work[col] - causal_mean).replace([np.inf, -np.inf], np.nan)
+        temporal_names.append(trend_name)
+
+    # Train-only healthy reference, with operating-state conditioning.
+    train_ids = set(train.index)
+    normal_train = train[train["Health_State"].astype(str).str.lower().eq("normal")]
+    global_stats = {}
+    for col in numeric:
+        med = float(normal_train[col].median())
+        mad = float((normal_train[col] - med).abs().median())
+        scale = max(1.4826 * mad, float(normal_train[col].std()), 1e-3)
+        global_stats[col] = (med, scale)
+
+    residual_names: list[str] = []
+    state_stats: dict[tuple[str, str], tuple[float, float]] = {}
+    if "Operating_State" in base_features:
+        for state, grp in normal_train.groupby("Operating_State", dropna=False):
+            key_state = str(state)
+            for col in numeric:
+                med = float(grp[col].median())
+                mad = float((grp[col] - med).abs().median())
+                scale = max(1.4826 * mad, float(grp[col].std()), 1e-3)
+                state_stats[(key_state, col)] = (med, scale)
+
+    for col in numeric:
+        def residual(row):
+            key = (str(row["Operating_State"]), col) if "Operating_State" in base_features else None
+            med, scale = state_stats.get(key, global_stats[col]) if key is not None else global_stats[col]
+            return (float(row[col]) - med) / scale
+        rname = f"physres_{col}"
+        work[rname] = work.apply(residual, axis=1).replace([np.inf, -np.inf], np.nan)
+        residual_names.append(rname)
+
+    engineered = temporal_names + residual_names
+    train_out = work.loc[train.index].copy()
+    test_out = work.loc[test.index].copy()
+    return train_out, test_out, engineered
+
 def benchmark_model(name, model, train, test, features) -> dict:
     pipe = make_pipeline(model, features)
     y_train = train["Health_State"]
@@ -258,15 +322,27 @@ def main() -> int:
     except ImportError:
         optional["CatBoost"] = None
 
+    train_aug, test_aug, engineered = engineer_temporal_physics_features(df, train, test, features)
+    feature_sets = {
+        "baseline": features,
+        "temporal": features + [f for f in engineered if f.startswith("d_") or f.startswith("trend5_")],
+        "physics_residual": features + [f for f in engineered if f.startswith("physres_")],
+        "temporal_plus_physics": features + engineered,
+    }
+
     results = []
-    for name, model in {**models, **optional}.items():
-        if model is None:
-            results.append({"model": name, "status": "NOT_INSTALLED"})
-            continue
-        try:
-            results.append(benchmark_model(name, model, train, test, features))
-        except Exception as exc:
-            results.append({"model": name, "status": "FAILED", "error": repr(exc)})
+    for feature_set_name, feature_set in feature_sets.items():
+        for name, model in {**models, **optional}.items():
+            if model is None:
+                results.append({"feature_set": feature_set_name, "model": name, "status": "NOT_INSTALLED"})
+                continue
+            try:
+                result = benchmark_model(name, model, train_aug, test_aug, feature_set)
+                result["feature_set"] = feature_set_name
+                result["feature_count"] = len(feature_set)
+                results.append(result)
+            except Exception as exc:
+                results.append({"feature_set": feature_set_name, "model": name, "status": "FAILED", "error": repr(exc)})
 
     output = {
         "benchmark": "AeroPulse-X leakage-safe health classifier comparison",
@@ -277,6 +353,8 @@ def main() -> int:
         "train_flights": sorted(train_groups),
         "test_flights": sorted(test_groups),
         "features": features,
+        "engineered_features": engineered,
+        "feature_set_names": list(feature_sets),
         "forbidden_feature_contract": sorted(FORBIDDEN_FEATURES),
         "results": results,
         "method_note": (
