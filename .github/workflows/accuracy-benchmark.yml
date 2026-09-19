@@ -21,6 +21,13 @@ jobs:
       - run: python -m pip install --upgrade pip
       - run: pip install -r requirements.txt
       - run: pip install -r requirements-benchmark.txt
+      - name: Extract ACES dataset
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f FINAL_DATASET/ACES/aces_health.zip
+          unzip -q -o FINAL_DATASET/ACES/aces_health.zip -d FINAL_DATASET/ACES
+          test -f FINAL_DATASET/ACES/aces_health.csv
       - run: python scripts/benchmark_health_models.py --data-dir FINAL_DATASET
       - uses: actions/upload-artifact@v4
         with:
