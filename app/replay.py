@@ -145,17 +145,11 @@ def _trajectory_health(
             1,
         )
 
-    # Keep the initial healthy portion close to the actual AI health.
-    # As fault severity progresses, introduce a bounded degradation
-    # trajectory of up to 55 health points.
-    degradation_penalty = (
-        55.0 * severity
-    )
-
-    replay_health = (
-        base_health
-        - degradation_penalty
-    )
+    # The diagnostic health index is already derived from observable
+    # telemetry/physics evidence. Do not subtract the injected fault severity
+    # again here: that would make replay health depend directly on the known
+    # synthetic label and would double-count degradation.
+    replay_health = base_health
 
     return round(
         max(
