@@ -230,10 +230,14 @@ class AeroTwinAI:
         )
         base_health_index = max(0.0, min(100.0, base_health_index))
 
-        # Degradation Penalty
+        # IMPORTANT: Do not use simulator ground-truth degradation severity in the
+        # inferred health score. That field is a label/metadata value in synthetic
+        # trajectories and would create target leakage. Health must be determined
+        # from observable telemetry, physics residuals, sensor trust, and model
+        # evidence only.
         degradation_severity = max(0.0, min(1.0, float(telemetry.get("Degradation_Severity", 0.0))))
-        degradation_penalty = degradation_severity * 45.0
-        health_index_value = max(0.0, min(100.0, base_health_index - degradation_penalty))
+        degradation_penalty = 0.0
+        health_index_value = max(0.0, min(100.0, base_health_index))
 
         # Fused Health State Thresholds
         if health_index_value >= 85:
