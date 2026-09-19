@@ -107,7 +107,7 @@ def make_pipeline(model, features: list[str]) -> Pipeline:
                 Pipeline(
                     [
                         ("impute", SimpleImputer(strategy="most_frequent")),
-                        ("onehot", OneHotEncoder(handle_unknown="ignore")),
+                        ("onehot", OneHotEncoder(handle_unknown="ignore", sparse_output=False)),
                     ]
                 ),
                 categorical,
