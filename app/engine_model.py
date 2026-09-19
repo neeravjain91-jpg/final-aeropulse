@@ -207,22 +207,28 @@ class ReducedOrderPistonEngine:
         alternator_temp_f = (48.0 + 26.0 * (battery_current / 35.0) + 0.6 * ambient_c) * 1.8 + 32.0
 
         misfire_vib = 1.65 * float(inputs.misfire_fraction)
-        vibration_g = 0.85 + 0.75 * math.pow(rpm / self.NOMINAL_RPM, 2.0) + 0.45 * (load - 0.5) + misfire_vib
+        # Shared vibration correlation used by both the physics model and
+        # trajectory generator. It is a reduced-order demonstrator correlation,
+        # not measured accelerometer ground truth.
+        vibration_g = 1.05 + 0.25 * math.pow(rpm / 5800.0, 2.0) + 0.12 * throttle + misfire_vib
 
+        # Canonical engine-model temperature contract: all thermal outputs are °C.
+        # Internal correlations above use Fahrenheit-like empirical reference values.
+        f_to_c = lambda value: (float(value) - 32.0) * 5.0 / 9.0
         return {
             "Engine_RPM": round(rpm, 1),
-            "EGT1": round(egt1, 1),
-            "EGT2": round(egt2, 1),
-            "EGT3": round(egt3, 1),
-            "CHT": round(cht, 1),
+            "EGT1": round(f_to_c(egt1), 1),
+            "EGT2": round(f_to_c(egt2), 1),
+            "EGT3": round(f_to_c(egt3), 1),
+            "CHT": round(f_to_c(cht), 1),
             "Fuel_Flow": round(fuel_flow_l_h, 2),
-            "Oil_Temp": round(oil_temp_f, 1),
+            "Oil_Temp": round(f_to_c(oil_temp_f), 1),
             "Oil_Pressure": round(oil_press_psi, 1),
             "Battery_Voltage": round(battery_voltage, 2),
             "Battery_Current": round(battery_current, 2),
-            "Alternator_Temp": round(alternator_temp_f, 1),
-            "EFI_Fuel_Temp": round(fuel_temp_f, 1),
-            "EFI_Water_Temp": round(water_temp_f, 1),
+            "Alternator_Temp": round(f_to_c(alternator_temp_f), 1),
+            "EFI_Fuel_Temp": round(f_to_c(fuel_temp_f), 1),
+            "EFI_Water_Temp": round(f_to_c(water_temp_f), 1),
             "MAP_Injector": round(map_injector, 2),
             "Vibration": round(vibration_g, 3),
             "Efficiency": round(state.thermal_efficiency, 4),
