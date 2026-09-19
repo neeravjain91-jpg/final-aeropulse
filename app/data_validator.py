@@ -135,13 +135,13 @@ class DataQualityValidator:
                 vals = [float(v) for v in vals if v is not None and math.isfinite(float(v))]
                 return sum(vals) / len(vals) if vals else None
             if fault == "overheating":
-                f, l = avg(first, "cht"), avg(last, "cht")
+                f, l = avg(first, "CHT"), avg(last, "CHT")
                 ok = f is not None and l is not None and l > f
             elif fault == "lubrication":
                 f, l = avg(first, "oil_pressure"), avg(last, "oil_pressure")
                 ok = f is not None and l is not None and l < f
             elif fault == "misfire":
-                f, l = avg(first, "egt1"), avg(last, "egt1")
+                f, l = avg(first, "EGT"), avg(last, "EGT")
                 ok = f is not None and l is not None and l < f
             elif fault == "injector":
                 f, l = avg(first, "fuel_flow"), avg(last, "fuel_flow")
