@@ -207,8 +207,15 @@ class ReducedOrderPistonEngine:
         alternator_temp_f = (48.0 + 26.0 * (battery_current / 35.0) + 0.6 * ambient_c) * 1.8 + 32.0
 
         misfire_vib = 1.65 * float(inputs.misfire_fraction)
-        vibration_g = 0.85 + 0.75 * math.pow(rpm / self.NOMINAL_RPM, 2.0) + 0.45 * (load - 0.5) + misfire_vib
+        # Shared vibration correlation used by both the physics model and
+        # trajectory generator. It is a reduced-order demonstrator correlation,
+        # not measured accelerometer ground truth.
+        vibration_g = 1.05 + 0.25 * math.pow(rpm / 5800.0, 2.0) + 0.12 * throttle + misfire_vib
 
+        # ACES/FlightGear piston telemetry uses the native engine-channel
+        # temperature conventions used by this project (deg F for thermal
+        # channels). Keep the physics output in the same units as the
+        # training/reference telemetry; do not silently mix deg C and deg F.
         return {
             "Engine_RPM": round(rpm, 1),
             "EGT1": round(egt1, 1),

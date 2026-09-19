@@ -114,7 +114,7 @@ def test_automatic_throttle_and_load_scheduling():
 
 def test_uav_mission_simulator_with_path_driven_waypoints():
     mission = UAVMissionSimulator(waypoints=DEFAULT_MISSION_WAYPOINTS, ambient_c=32.0)
-    assert mission.duration_min > 20.0
+    assert mission.duration_min > 90.0
     
     point_start = mission.point(0, 50)
     point_mid = mission.point(25, 50)

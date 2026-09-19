@@ -56,6 +56,7 @@ def _replay_rul(
     stress: float = 1.0,
     tbo_hours: float = 1200.0,
     current_health: float = 100.0,
+    previous_rul_hours: float | None = None,
 ) -> dict:
 
     trend = estimate_degradation_horizon(
@@ -72,6 +73,8 @@ def _replay_rul(
         horizon = float(trend["rul_hours"])
         spread = 0.25 * (1.0 - confidence) + 0.05
         bounded = max(0.0, min(max_achievable, horizon))
+        if previous_rul_hours is not None:
+            bounded = min(bounded, max(0.0, float(previous_rul_hours)))
 
         return {
             "rul_hours": round(bounded, 2),
@@ -87,6 +90,8 @@ def _replay_rul(
     if fallback and fallback.get("rul_hours") is not None:
         fb_rul = float(fallback["rul_hours"])
         bounded = max(0.0, min(max_achievable, fb_rul))
+        if previous_rul_hours is not None:
+            bounded = min(bounded, max(0.0, float(previous_rul_hours)))
         conf = float(fallback.get("rul_confidence", fallback.get("confidence", 0.75)))
         spread = 0.25 * (1.0 - conf) + 0.05
         return {
@@ -145,17 +150,11 @@ def _trajectory_health(
             1,
         )
 
-    # Keep the initial healthy portion close to the actual AI health.
-    # As fault severity progresses, introduce a bounded degradation
-    # trajectory of up to 55 health points.
-    degradation_penalty = (
-        55.0 * severity
-    )
-
-    replay_health = (
-        base_health
-        - degradation_penalty
-    )
+    # The diagnostic health index is already derived from observable
+    # telemetry/physics evidence. Do not subtract the injected fault severity
+    # again here: that would make replay health depend directly on the known
+    # synthetic label and would double-count degradation.
+    replay_health = base_health
 
     return round(
         max(
@@ -229,6 +228,8 @@ def run_replay(
     timeline = []
 
     health_history = []
+
+    previous_rul_hours = None
 
     ai_warning_step = None
 
@@ -415,7 +416,11 @@ def run_replay(
             stress=stress,
             tbo_hours=tbo_hours,
             current_health=replay_health,
+            previous_rul_hours=previous_rul_hours,
         )
+
+        if rul.get("rul_hours") is not None:
+            previous_rul_hours = float(rul["rul_hours"])
 
         timeline.append(
             {

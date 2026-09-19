@@ -60,7 +60,7 @@ def assess_sensor_health(telemetry: dict, twin: dict) -> dict:
 
     if "CHT" in telemetry:
         cht_val = telemetry.get("CHT")
-        if cht_val is None or (isinstance(cht_val, (int, float)) and (math.isnan(cht_val) or cht_val < 32.0 or cht_val > 550.0)):
+        if cht_val is None or (isinstance(cht_val, (int, float)) and (math.isnan(cht_val) or cht_val < 32.0 or cht_val > 400.0)):
             cht_score = 10.0
             cht_reason = "CHT sensor dropout / implausible out-of-range value"
         elif cht_z > 2.5 and avg_egt_abs < 1.2 and water_z < 1.2:

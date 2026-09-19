@@ -127,11 +127,14 @@ def mission_adjust(
     amb_c = float(ambient_c)
     dur_h = max(0.0, float(duration_h))
 
-    # Standard ISA Barometric calculation
+    # Standard-atmosphere pressure ratio in the troposphere.
+    # Pressure is referenced to ISA sea-level temperature (288.15 K);
+    # ambient temperature is used separately for the density correction.
     h_m = alt_ft * 0.3048
-    t_amb_k = 273.15 + amb_c - 0.0065 * h_m
-    p_amb_ratio = math.pow(max(0.1, t_amb_k / (273.15 + amb_c)), 5.255)
-    sigma = max(0.20, min(1.15, p_amb_ratio * ((273.15 + amb_c) / max(100.0, t_amb_k))))
+    isa_t_k = max(180.0, 288.15 - 0.0065 * h_m)
+    p_amb_ratio = max(0.10, (isa_t_k / 288.15) ** 5.25588)
+    actual_t_k = max(180.0, 273.15 + amb_c)
+    sigma = max(0.20, min(1.15, p_amb_ratio * (288.15 / actual_t_k)))
 
     altitude_factor = alt_ft / 10000.0
     hot_factor = max(0.0, amb_c - 25.0) / 25.0

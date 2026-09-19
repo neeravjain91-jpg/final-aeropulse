@@ -85,11 +85,10 @@ class VirtualDataLabEngine:
         )
         phys = self.engine_physics.predict(inputs)
 
-        cht_raw = float(phys.get("CHT", 110.0))
-        cht = round((cht_raw - 32.0) * 5.0 / 9.0, 1) if cht_raw > 150.0 else round(cht_raw, 1)
-
-        oil_temp_raw = float(phys.get("Oil_Temp", 88.0))
-        oil_temp = round((oil_temp_raw - 32.0) * 5.0 / 9.0, 1) if oil_temp_raw > 140.0 else round(oil_temp_raw, 1)
+        # Engine model now has a strict canonical thermal contract: °C.
+        # Do not apply threshold-based unit guessing here.
+        cht = round(float(phys.get("CHT", 43.0)), 1)
+        oil_temp = round(float(phys.get("Oil_Temp", 88.0)), 1)
 
         oil_press = float(phys.get("Oil_Pressure", 45.0))
         fuel_flow = float(phys.get("Fuel_Flow", 18.0))
@@ -97,10 +96,10 @@ class VirtualDataLabEngine:
         map_inhg = float(phys.get("MAP_Injector", 28.5))
         torque = (power_kw * 1000.0) / max(1.0, (rpm * 2.0 * math.pi / 60.0))
         coolant_temp = round(cht * 0.78 + ambient_c * 0.22, 1)
-        egt_raw = float(phys.get("EGT1", 680.0 + 120.0 * throttle))
-        egt = round((egt_raw - 32.0) * 5.0 / 9.0, 1) if egt_raw > 1000.0 else round(egt_raw, 1)
-        # Calibrate baseline vibration: healthy baseline for Rotax 914 / aero-piston is 1.15 ± 0.1 g RMS
-        vibration = round(1.05 + 0.25 * (rpm / 5800.0)**2 + 0.12 * throttle, 3)
+        egt = round(float(phys.get("EGT1", 620.0)), 1)
+        # Use the exact same reduced-order vibration correlation as the physics
+        # model; do not maintain two competing vibration baselines.
+        vibration = round(float(phys.get("Vibration", 1.15)), 3)
         airflow = float(fuel_flow * 0.72 * 14.7)
 
         state = {
