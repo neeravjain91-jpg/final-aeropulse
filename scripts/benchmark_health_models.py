@@ -29,7 +29,7 @@ from sklearn.model_selection import GroupShuffleSplit
 from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
-from sklearn.preprocessing import OneHotEncoder
+from sklearn.preprocessing import OneHotEncoder, LabelEncoder
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -136,12 +136,22 @@ def critical_metrics(y_true, pred) -> dict:
 
 def benchmark_model(name, model, train, test, features) -> dict:
     pipe = make_pipeline(model, features)
+    y_train = train["Health_State"]
+    y_test = test["Health_State"]
+    label_encoder = None
+    if name == "XGBoost":
+        # XGBoost's multiclass objective requires contiguous integer labels.
+        # Encode only the target; all telemetry feature columns remain unchanged.
+        label_encoder = LabelEncoder().fit(y_train)
+        y_train = label_encoder.transform(y_train)
     t0 = time.perf_counter()
-    pipe.fit(train[features], train["Health_State"])
+    pipe.fit(train[features], y_train)
     fit_seconds = time.perf_counter() - t0
 
     t1 = time.perf_counter()
     pred = pipe.predict(test[features])
+    if label_encoder is not None:
+        pred = label_encoder.inverse_transform(pred.astype(int))
     inference_seconds = time.perf_counter() - t1
 
     result = {
